@@ -7,6 +7,14 @@ dependencies:
   - python
   - pip
 
+    # Package dependencies
+  - numpy
+  - rdkit
+  - openbabel
+  - MDAnalysis
+  - Bio
+  - ipywidgets
+
     # Testing
   - pytest
   - pytest-cov
