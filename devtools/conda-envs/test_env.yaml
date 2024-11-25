@@ -12,7 +12,7 @@ dependencies:
   - rdkit
   - openbabel
   - MDAnalysis
-  - Bio
+  - biopython
   - ipywidgets
 
     # Testing
