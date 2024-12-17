@@ -2,7 +2,7 @@
 from rdkit import Chem
 from openbabel import pybel
 import ipywidgets as widgets
-from ipywidgets import Text, Layout, Label, Box, HBox, Output
+from ipywidgets import Text, Layout, Label, Box, HBox
 from IPython.display import display
 
 def create_ligands_from_smiles(num_of_ligs):

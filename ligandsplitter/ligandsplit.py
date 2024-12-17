@@ -1,13 +1,10 @@
 """Functions used to retrieve and split ligands from a PDB ID."""
-import numpy as np
-#import pandas as pd
 import re
 import sys, os
 from Bio.PDB import PDBList
 import MDAnalysis as mda 
 from openbabel import pybel
-from .functions import convert_type, create_folders
-from .ligandssmiles import create_ligands_from_smiles
+from .basefunctions import convert_type, create_folders
 
 class File_Info:
     def __init__(self, tripos_mol, tripos_atom, tripos_bond, lines_mols, lines_atoms, lines_bonds):
@@ -48,7 +45,7 @@ def retrieve_pdb_file(pdb_id):
     Parameters
     ----------
     pdb_id : String
-        Set whether or not to display who the quote is from.
+        Set to PDB ID of interest
 
     Returns
     -------
@@ -57,6 +54,7 @@ def retrieve_pdb_file(pdb_id):
 
     # isolate protein
     pdb_list = PDBList()
+    global pdb_filename
     pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
     u = mda.Universe(pdb_filename)
     protein = u.select_atoms("protein")
@@ -121,8 +119,8 @@ def get_mol2_info(ligand_file):
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    ligand_file : String
+        Set to file name returned from retrieve_pdb_file function
 
     Returns
     -------
@@ -186,7 +184,7 @@ def get_ligands(file_info):
     Parameters
     ----------
     pdb_id : String
-        Set whether or not to display who the quote is from.
+        Set to File_Info returned from get_mol2_info function
 
     Returns
     -------
@@ -259,7 +257,7 @@ def find_ligands_unique(ligand_list):
     Parameters
     ----------
     pdb_id : String
-        Set whether or not to display who the quote is from.
+        Set to ligand_list returned from get_ligands function
 
     Returns
     -------
@@ -282,7 +280,7 @@ def write_mol2(ligs_unique, file_info):
     Parameters
     ----------
     pdb_id : String
-        Set whether or not to display who the quote is from.
+        Set to PDB ID used in retrieve_pdb_file function
 
     Returns
     -------
@@ -377,7 +375,7 @@ def separate_mol2_ligs(filename = ''):
     Parameters
     ----------
     pdb_id : String
-        Set whether or not to display who the quote is from.
+        Set to file name returned from retrieve_pdb_file function
 
     Returns
     -------
@@ -394,4 +392,4 @@ def separate_mol2_ligs(filename = ''):
 if __name__ == "__main__":
     # Do something if this file is invoked on its own
     retrieve_pdb_file()
-    separate_mol2_ligs(filename = '')
+    separate_mol2_ligs(filename = pdb_filename)
