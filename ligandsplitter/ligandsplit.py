@@ -1,7 +1,8 @@
 """Functions used to retrieve and split ligands from a PDB ID."""
 import re
 import sys, os
-from Bio.PDB import PDBList
+from Bio.PDB import PDBList, PDBIO
+from Bio.PDB.MMCIFParser import MMCIFParser
 import MDAnalysis as mda 
 from openbabel import pybel
 from .basefunctions import convert_type, create_folders
@@ -38,7 +39,7 @@ class Ligand:
         self._lines_bond = lines_bond
         self.num_bonds = lines_bond[-1] - lines_bond[0] + 1
 
-def retrieve_pdb_file(pdb_id):
+def retrieve_pdb_file(pdb_id, format = ""):
     """
     Replace this function and doc string for your own project.
 
@@ -46,6 +47,7 @@ def retrieve_pdb_file(pdb_id):
     ----------
     pdb_id : String
         Set to PDB ID of interest
+    format: String (pdb or mmcif)
 
     Returns
     -------
@@ -55,54 +57,94 @@ def retrieve_pdb_file(pdb_id):
     # isolate protein
     pdb_list = PDBList()
     global pdb_filename
-    pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
-    u = mda.Universe(pdb_filename)
-    protein = u.select_atoms("protein")
-    protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
-    
-    # isolate ligands and remove water molecules from PDB file
-    ligand = u.select_atoms("not protein and not resname HOH")
-    try:
-        ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
-    except IndexError:
-        print(f"Protein from PDB ID {pdb_id} has no ligands present. PDB file of protein has been saved to data/PDB_files/{pdb_id}_protein.pdb")
+    atom_lines_added = 0
+    clean_ligand_exists = True
     # List of residue names for elemental ions
     list_of_ions = ["AG", "AL", "AM", "AU", "AU3", "BA", "BR", "BS3", "CA", "CD", "CE", "CF", "CL", "CO", "3CO", "CR", 
                     "CS", "CU1", "CU", "CU3", "DY", "ER3", "EU3", "EU", "F", "FE", "FE2", "GA", "GD3", "HG", "IN", 'IOD', 
                     "IR3", "IR", "K", "LA", "LI", "LU", "MG", "MN", "MN3", "4MO", "6MO", "NA", "ND", "NI", "3NI", "OS", 
                     "OS4", "PB", "PD", "PR", "PT", "PT4", "4PU", "RB", "RH3", "RHF", "RU", "SB", "SM", "SR", "TB", "TH", 
                     "4TI", "TL", "V", "W", "Y1", "YB", "YB2", "YT3", "ZCM", "ZN", "ZR", "ZTM"]
-    atom_lines_added = 0
-    clean_ligand_exists = True
-    try:
-        with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb", 'w+') as datafile: 
-            with open(f"data/PDB_files/{pdb_id}_ligand.pdb","r") as outfile:
-                data = outfile.readlines()
+    if format == "pdb":
+        pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
+        u = mda.Universe(pdb_filename)
+        protein = u.select_atoms("protein")
+        protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+    
+        # isolate ligands and remove water molecules from PDB file
+        ligand = u.select_atoms("not protein and not resname HOH")
+        try:
+            ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
+        except IndexError:
+            print(f"Protein from PDB ID {pdb_id} has no ligands present. PDB file of protein has been saved to data/PDB_files/{pdb_id}_protein.pdb")
+        try:
+            with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb", 'w+') as datafile: 
+                with open(f"data/PDB_files/{pdb_id}_ligand.pdb","r") as outfile:
+                    data = outfile.readlines()
+                for line in data:
+                    if 'HETATM' in line:
+                        split_line = line.split()
+                        line_1_join = split_line[1]
+                        line_2_join = split_line[2]
+                        line_3_join = split_line[3]
+                        if 'HETATM' not in split_line[0]:
+                            datafile.write(line)
+                        # only write hetatm lines if they are not atomic ions -- if the alphabetical characters in the
+                        # res name column and atom name column are the same, it is likely an atomic ion. compare res name
+                        # to entries in list_of_ions
+                        elif (split_line[0] == 'HETATM') and (line_2_join != line_3_join) and (line_3_join not in list_of_ions):
+                            datafile.write(line)
+                            atom_lines_added += 1
+                        # if res number is 10000 or greater, columns for atom type and res number are counted as one
+                        # due to lack of white space, affecting numbering. compare res name to entries in list_of_ions
+                        elif (split_line[0] != 'HETATM') and (line_1_join != line_2_join)and (line_2_join not in list_of_ions):
+                            datafile.write(line)
+                            atom_lines_added += 1
+                    else:
+                        datafile.write(line)
+        except FileNotFoundError:
+            clean_ligand_exists = False
+            print("")
+    elif format == "mmcif":
+        pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="mmCif")
+        # parse mmcif file and produce a pdb file with only the protein present
+        p = MMCIFParser()
+        struc_prot = p.get_structure("", pdb_filename)
+        for model in struc_prot:
+            for chain in model:
+                for residue in list(chain):
+                    res_id = residue.id
+                    if res_id[0] != ' ':
+                        chain.detach_child(res_id)
+        io = PDBIO()
+        io.set_structure(struc_prot)
+        io.save(f"data/PDB_files/{pdb_id}_protein.pdb")
+        # get ligand information from mmcif file if available
+        p = MMCIFParser()
+        struc_lig = p.get_structure("", pdb_filename)
+        for model in struc_lig:
+            for chain in model:
+                for residue in list(chain):
+                    res_id = residue.id
+                    if res_id[0] == ' ' or res_id[0] == 'W':
+                        chain.detach_child(res_id)
+                    else:
+                        for value in list_of_ions:
+                            if res_id[0] == f'H_{value}':
+                                chain.detach_child(res_id)
+        io = PDBIO()
+        io.set_structure(struc_lig)
+        io.save(f"data/PDB_files/{pdb_id}_clean_ligand.pdb")
+        with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb","r") as outfile:
+            data = outfile.readlines()
             for line in data:
                 if 'HETATM' in line:
-                    split_line = line.split()
-                    line_1_join = split_line[1]
-                    line_2_join = split_line[2]
-                    line_3_join = split_line[3]
-                    if 'HETATM' not in split_line[0]:
-                        datafile.write(line)
-                    # only write hetatm lines if they are not atomic ions -- if the alphabetical characters in the
-                    # res name column and atom name column are the same, it is likely an atomic ion. compare res name
-                    # to entries in list_of_ions
-                    elif (split_line[0] == 'HETATM') and (line_2_join != line_3_join) and (line_3_join not in list_of_ions):
-                        datafile.write(line)
-                        atom_lines_added += 1
-                    # if res number is 10000 or greater, columns for atom type and res number are counted as one
-                    # due to lack of white space, affecting numbering. compare res name to entries in list_of_ions
-                    elif (split_line[0] != 'HETATM') and (line_1_join != line_2_join)and (line_2_join not in list_of_ions):
-                        datafile.write(line)
-                        atom_lines_added += 1
-                else:
-                    datafile.write(line)
-    except FileNotFoundError:
+                    atom_lines_added += 1
+        if atom_lines_added == 0:
+            clean_ligand_exists = False
+    else:
         clean_ligand_exists = False
-        print("")
-            
+        print("Invalid format entered. Please enter format as either pdb or mmcif.")
     # convert ligand pdb file to mol2 file, or return a warning if only elemental ions are present
     if atom_lines_added == 0 and clean_ligand_exists:
         print(f"Warning: Ligands cannot be extracted from PDB ID {pdb_id} as only atomic ions are present. PDB file of protein has been saved to data/PDB_files/{pdb_id}_protein.pdb")
