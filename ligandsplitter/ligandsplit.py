@@ -1,11 +1,14 @@
 """Functions used to retrieve and split ligands from a PDB ID."""
+import numpy as np
+#import pandas as pd
 import re
 import sys, os
 from Bio.PDB import PDBList, PDBIO
 from Bio.PDB.MMCIFParser import MMCIFParser
 import MDAnalysis as mda 
 from openbabel import pybel
-from .basefunctions import convert_type, create_folders
+from basefunctions import convert_type
+from ligandsmiles import create_ligands_from_smiles, create_mols_from_smiles
 
 class File_Info:
     def __init__(self, tripos_mol, tripos_atom, tripos_bond, lines_mols, lines_atoms, lines_bonds):
@@ -161,8 +164,8 @@ def get_mol2_info(ligand_file):
 
     Parameters
     ----------
-    ligand_file : String
-        Set to file name returned from retrieve_pdb_file function
+    pdb_id : String
+        Set whether or not to display who the quote is from.
 
     Returns
     -------
@@ -226,7 +229,7 @@ def get_ligands(file_info):
     Parameters
     ----------
     pdb_id : String
-        Set to File_Info returned from get_mol2_info function
+        Set whether or not to display who the quote is from.
 
     Returns
     -------
@@ -235,11 +238,23 @@ def get_ligands(file_info):
     ligs_temp = []
     lig_loc = []
     atoms = []
+    UNL1_count = 0
     # get ligand names and atom locations for each ligand
     for linenum, line in enumerate(file_info.lines_atoms):
         ligand = line
         lig_atom = ligand.split()
         lig1 = str(lig_atom[-2])
+        # if a ligand is not in the list of identified ligands and is not labeled as 
+        # "UNL1", record the line number
+        if lig1 == 'UNL1':
+            try:
+                if (len(name_vals) > 0):
+                    keys = list(name_vals.values())
+                    lig_atom[-2] = keys[UNL1_count]
+                    lig1 = keys[UNL1_count]
+                    UNL1_count += 1
+            except:
+                pass
         # if a ligand is not in the list of identified ligands and is not labeled as 
         # "UNL1", record the line number
         if (lig1 not in ligs_temp) & (lig1 != 'UNL1'):
@@ -299,7 +314,7 @@ def find_ligands_unique(ligand_list):
     Parameters
     ----------
     pdb_id : String
-        Set to ligand_list returned from get_ligands function
+        Set whether or not to display who the quote is from.
 
     Returns
     -------
@@ -322,7 +337,7 @@ def write_mol2(ligs_unique, file_info):
     Parameters
     ----------
     pdb_id : String
-        Set to PDB ID used in retrieve_pdb_file function
+        Set whether or not to display who the quote is from.
 
     Returns
     -------
@@ -417,21 +432,16 @@ def separate_mol2_ligs(filename = ''):
     Parameters
     ----------
     pdb_id : String
-        Set to file name returned from retrieve_pdb_file function
+        Set whether or not to display who the quote is from.
 
     Returns
     -------
     None
     """
-    current_dir = create_folders()
+    current_dir = os.getcwd()
     ligand_file = os.path.join(current_dir, filename)
     file_info = get_mol2_info(ligand_file)
     ligand_list = get_ligands(file_info)
     ligs_unique = find_ligands_unique(ligand_list)
     ligs, filenames = write_mol2(ligs_unique, file_info)
     return ligs, filenames
-
-if __name__ == "__main__":
-    # Do something if this file is invoked on its own
-    retrieve_pdb_file()
-    separate_mol2_ligs(filename = pdb_filename)

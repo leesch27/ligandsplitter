@@ -2,8 +2,157 @@
 from rdkit import Chem
 from openbabel import pybel
 import ipywidgets as widgets
-from ipywidgets import Text, Layout, Label, Box, HBox
+from ipywidgets import Text, Layout, Label, Box, HBox, Dropdown, Output
+import requests
+import rcsbsearchapi
+from rcsbsearchapi.search import AttributeQuery, Attr, TextQuery, ChemSimilarityQuery
 from IPython.display import display
+
+def create_search_for_expo():
+    """
+    Replace this function and doc string for your own project.
+
+    Parameters
+    ----------
+    pdb_id : String
+        Set whether or not to display who the quote is from.
+
+    Returns
+    -------
+    None
+    """
+    global attr_bool
+    global attr_val
+    chem_types = ["D-beta-peptide, C-gamma linking",
+                "D-gamma-peptide, C-delta linking",
+                "D-peptide COOH carboxy terminus",
+                "D-peptide NH3 amino terminus",
+                "D-peptide linking",
+                "D-saccharide",
+                "D-saccharide, alpha linking",
+                "D-saccharide, beta linking",
+                "DNA OH 3 prime terminus",
+                "DNA OH 5 prime terminus",
+                "DNA linking",
+                "L-DNA linking",
+                "L-RNA linking",
+                "L-beta-peptide, C-gamma linking",
+                "L-gamma-peptide, C-delta linking",
+                "L-peptide COOH carboxy terminus",
+                "L-peptide NH3 amino terminus",
+                "L-peptide linking",
+                "L-saccharide",
+                "L-saccharide, alpha linking",
+                "L-saccharide, beta linking",
+                "RNA OH 3 prime terminus",
+                "RNA OH 5 prime terminus",
+                "RNA linking",
+                "non-polymer",
+                "other",
+                "peptide linking",
+                "peptide-like",
+                "saccharide"]
+    form_item_layout = Layout(
+    display='flex',
+    flex_flow='row',
+    justify_content='space-between')
+    style = {'description_width': 'initial'}
+
+    attr1 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Name?:', style = style)
+    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Free Ligands?', style = style)
+    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Type', style = style)
+    attr4 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical ID?', style = style)
+    attr5 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Brand Name?', style = style)
+    attr6 = Dropdown(options = ["No", "Yes"], description = 'Search by Formula Similarity?', style = style)
+    attr7 = Dropdown(options = ["No", "Yes"], description = 'Search by Structure Similarity?', style = style)
+    attr1_val = Text(value = '', placeholder='Type Chemical Name Here', disabled=False)
+    attr2_val = Text(value = '', placeholder='Type Free Ligand ID Here', disabled=False)
+    attr3_val = Dropdown(options = chem_types, description = 'Select Chemical Type?', style = style)
+    attr4_val = Text(value = '', placeholder='Type Chemical ID Here', disabled=False)
+    attr5_val = Text(value = '', placeholder='Type Chemical Brand Name Here', disabled=False)
+    attr6_val = Text(value = '', placeholder='Type Ligand Formula Here', disabled=False)
+    attr7_val = Text(value = '', placeholder='Type Ligand SMILES Here', disabled=False)
+
+    attr_bool = {"attr1": attr1, "attr2": attr2, "attr3": attr3, "attr4": attr4, "attr5": attr5, "attr6": attr6, "attr7": attr7}
+    attr_val = {"attr1_val": attr1_val, "attr2_val": attr2_val, "attr3_val": attr3_val, "attr4_val": attr4_val, "attr5_val": attr5_val, "attr6_val": attr6_val, "attr7_val": attr7_val}
+
+    form_items1 = [attr1, attr2, attr3, attr4, attr5, attr6, attr7]
+    form_items2 = [attr1_val, attr2_val, attr3_val, attr4_val, attr5_val, attr6_val, attr7_val]
+    return attr_bool, attr_val, form_items1, form_items2
+
+def display_expo_form(form_items1, form_items2):
+    """
+    Replace this function and doc string for your own project.
+
+    Parameters
+    ----------
+    pdb_id : String
+        Set whether or not to display who the quote is from.
+
+    Returns
+    -------
+    None
+    """
+    form_1 = Box(form_items1, layout = Layout(
+        display = 'flex',
+        flex_flow = 'column',
+        border = 'solid 2px',
+        align_items = 'stretch',
+        width = '50%'))
+    form_2 = Box(form_items2, layout = Layout(
+        display = 'flex',
+        flex_flow = 'column',
+        border = 'solid 2px',
+        align_items = 'stretch',
+        width = '50%'))
+
+    form = HBox([form_1, form_2])
+    return form
+
+def create_ligands_from_expo(attr_bool, attr_val):
+    """
+    Replace this function and doc string for your own project.
+
+    Parameters
+    ----------
+    pdb_id : String
+        Set whether or not to display who the quote is from.
+
+    Returns
+    -------
+    None
+    """
+    bool_vals = {}
+    val_vals = {}
+    for value in attr_bool.keys():
+        bool_vals[value] = attr_bool[value].value
+    for value in attr_val.keys():
+        val_vals[value] = attr_val[value].value
+    bools = list(bool_vals.values())
+    values = list(val_vals.values())
+    q1 = AttributeQuery(attribute = "chem_comp.name", operator = "exact_match", value = values[0])
+    q2 = AttributeQuery(attribute = "rcsb_nonpolymer_instance_annotation.comp_id", operator = "exact_match", value = values[1])
+    q3 = AttributeQuery(attribute = "chem_comp.type", operator = "exact_match", value = values[2])
+    q4 = AttributeQuery(attribute = "rcsb_chem_comp_container_identifiers.comp_id", operator = "in", value = values[3])
+    q5 = AttributeQuery(attribute = "drugbank_info.brand_names", operator = "contains_phrase", value = values[4])
+    q6 = ChemSimilarityQuery(query_type = "formula", value = values[5])
+    q7 = ChemSimilarityQuery(query_type = "descriptor", descriptor_type = "SMILES", match_type="fingerprint-similarity", value = values[6])
+    
+    attr_list = [q1, q2, q3, q4, q5, q6, q7]
+    positives = []
+    global query
+    for number, value in enumerate(bools):
+        if value == "Yes":
+            positives.append(attr_list[number])
+    if len(positives) > 0:
+        if len(positives) == 1:
+            query = positives[0]
+        else:
+            query = ' & '.join(x for x in positives)
+    else:
+        print("Invalid.")
+    result_lig = list(query())
+    return result_lig, query
 
 def create_ligands_from_smiles(num_of_ligs):
     """
@@ -45,7 +194,21 @@ def create_ligands_from_smiles(num_of_ligs):
         temp_box = "box" + str(list_number)
         new_number = list_number + 1
         form_items2.append(Box([labels_smiles["scratch" + str(new_number)], smiles_for_ligs[smiles]], layout=form_item_layout))
+    return names_for_ligs, smiles_for_ligs, form_items1, form_items2
 
+def display_form(num_of_ligs, form_items1, form_items2):
+    """
+    Replace this function and doc string for your own project.
+
+    Parameters
+    ----------
+    pdb_id : String
+        Set whether or not to display who the quote is from.
+
+    Returns
+    -------
+    None
+    """
     form1 = Box(form_items1, layout = Layout(
         display = 'flex',
         flex_flow = 'column',
@@ -107,7 +270,3 @@ def create_mols_from_smiles(num_of_ligs):
         out.write(mol)
     out.close()
     return name_vals, scratch_vals
-
-if __name__ == "__main__":
-    # Do something if this file is invoked on its own
-    create_ligands_from_smiles()

@@ -61,7 +61,3 @@ def validate_unique_ligands(ligs):
             mol_list.append(mol)
     ligs, filenames = parse_unique_ligands(smiles_list, ligs)
     return ligs, filenames
-
-if __name__ == "__main__":
-    # Do something if this file is invoked on its own
-    print(validate_unique_ligands())
