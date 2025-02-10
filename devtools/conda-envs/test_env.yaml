@@ -19,9 +19,9 @@ dependencies:
   - pytest
   - pytest-cov
   - codecov
-  - rcsbsearchapi
 
     # Pip-only installs
-  #- pip:
+  - pip:
   #  - codecov
+    - rcsbsearchapi
 
