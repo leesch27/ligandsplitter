@@ -7,8 +7,8 @@ from Bio.PDB import PDBList, PDBIO
 from Bio.PDB.MMCIFParser import MMCIFParser
 import MDAnalysis as mda 
 from openbabel import pybel
-from .basefunctions import convert_type
-from .ligandsmiles import create_ligands_from_smiles, create_mols_from_smiles
+from ligandsplitter.basefunctions import convert_type
+from ligandsplitter.ligandsmiles import create_ligands_from_smiles, create_mols_from_smiles
 
 class File_Info:
     def __init__(self, tripos_mol, tripos_atom, tripos_bond, lines_mols, lines_atoms, lines_bonds):
