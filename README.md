@@ -5,8 +5,29 @@ ligandsplitter
 [![codecov](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/ligandsplitter/branch/main/graph/badge.svg)](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/ligandsplitter/branch/main)
 
 
-A python package for splitting, creating, and validating ligand files
+A Python package for splitting, creating, and validating ligand files
 
+### Usage
+
+This repository is not meant to be used as a standalone program and was made to enhance a series of notebooks that explore molecular docking using Jupyter notebooks. This repository, called basil_dock, is currently being developed and will be released in the near future.
+
+### Installation
+
+When cloning the basil_dock, make sure to initialize the submodule. This can be done in one of two ways:
+1. Clone basil_dock before initializing submodule
+```
+git clone <url to basil_dock>
+```
+```
+cd ligandsplitter
+```
+```
+git submodule update --init --recursive
+```
+2. Clone basil_dock and initialize submodule at the same time
+```
+git clone --recurse-submodules <url to basil_dock>
+```
 ### Copyright
 
 Copyright (c) 2024, Lee Schoneman
