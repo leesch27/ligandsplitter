@@ -9,7 +9,7 @@ A Python package for splitting, creating, and validating ligand files
 
 ### Usage
 
-This repository is not meant to be used as a standalone program and was made to enhance a series of notebooks that explore molecular docking using Jupyter notebooks. This repository, called basil_dock, is currently being developed and will be released in the near future.
+This repository is currently not meant to be used as a standalone program and was made to enhance a series of notebooks that explore molecular docking using Jupyter notebooks. This repository, called basil_dock, is currently being developed and will be released in the near future.
 
 ### Installation
 
