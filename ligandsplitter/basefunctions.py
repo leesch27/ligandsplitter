@@ -78,7 +78,6 @@ def test_pull():
     query = q1 & q2 & q3
     global result_random
     result_random = list(query())
-    return(result_random)
 
 def on_button_clicked(b):
     global new_name
@@ -86,7 +85,6 @@ def on_button_clicked(b):
         print("Loading...")
         new_name = random.choice(result_random)
         print(f"PDB ID retieved: {new_name}")
-    return new_name
 
 def pull_random():
     lucky = Button(description="I'm feeling lucky",
@@ -98,6 +96,9 @@ def pull_random():
     output = widgets.Output()
     display(lucky, output)
     lucky.on_click(on_button_clicked)
+
+def get_new_name():
+        return new_name
 
 if __name__ == "__main__":
     # Do something if this file is invoked on its own
