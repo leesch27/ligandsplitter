@@ -187,5 +187,9 @@ def group_idxes_from_mol(lig):
             idxes_list = list(idxes)
             for index in idxes:
                 for subind in index:
-                    match_indexes[subind] = str(functional_groups_dict[j])
+                    if len(match_indexes[subind]) != 0:
+                        temp_match = list(match_indexes[subind].values())
+                        match_indexes[subind] = temp_match.append(str(functional_groups_dict[j]))
+                    else:
+                        match_indexes[subind] = list(str(functional_groups_dict[j]))
     return match_indexes
