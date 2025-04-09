@@ -46,6 +46,14 @@ def create_folders():
         os.mkdir(pdbqtPath)
     except OSError as error:
         print(error)
+
+    # create test file path/dir, return error if exists
+    testPath = os.path.join(dataPath, "test_files")
+    try:
+        os.mkdir(testPath)
+    except OSError as error:
+        print(error)
+    
     return current_dir
 
 def convert_type(start_type):

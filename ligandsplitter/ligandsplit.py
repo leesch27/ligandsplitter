@@ -8,7 +8,7 @@ from Bio.PDB.MMCIFParser import MMCIFParser
 import MDAnalysis as mda 
 from openbabel import pybel
 from .basefunctions import convert_type
-from .ligandsmiles import create_ligands_from_smiles, create_mols_from_smiles
+from .ligandgenerate import create_ligands_from_smiles, create_mols_from_smiles
 #from ligandsplitter.basefunctions import convert_type
 #from ligandsplitter.ligandsmiles import create_ligands_from_smiles, create_mols_from_smiles
 
@@ -224,7 +224,7 @@ def get_mol2_info(ligand_file):
                 lines_bonds.append(bond_renumbered)
     return File_Info(tripos_mol, tripos_atom, tripos_bond, lines_mols, lines_atoms, lines_bonds)
 
-def get_ligands(file_info):
+def get_ligands(file_info, name_vals = {}):
     """
     Replace this function and doc string for your own project.
 
@@ -232,6 +232,9 @@ def get_ligands(file_info):
     ----------
     pdb_id : String
         Set whether or not to display who the quote is from.
+    name_vals : dict
+        If being used to split a mol2 file generated from SMILES strings, this dict will
+        be used to rename the ligands.
 
     Returns
     -------
@@ -246,9 +249,9 @@ def get_ligands(file_info):
         ligand = line
         lig_atom = ligand.split()
         lig1 = str(lig_atom[-2])
-        # if a ligand is not in the list of identified ligands and is not labeled as 
-        # "UNL1", record the line number
-        if lig1 == 'UNL1':
+        # if a ligand is not in the list of identified ligands and is labeled as 
+        # "UNL1", attempt to rename it using the name_vals dictionary
+        if 'UNL' in lig1:
             try:
                 if (len(name_vals) > 0):
                     keys = list(name_vals.values())
@@ -427,7 +430,7 @@ def write_mol2(ligs_unique, file_info):
         infile.close()
     return ligs, filenames
 
-def separate_mol2_ligs(filename = ''):
+def separate_mol2_ligs(filename = '', name_vals = {}):
     """
     Replace this function and doc string for your own project.
 
@@ -443,7 +446,7 @@ def separate_mol2_ligs(filename = ''):
     current_dir = os.getcwd()
     ligand_file = os.path.join(current_dir, filename)
     file_info = get_mol2_info(ligand_file)
-    ligand_list = get_ligands(file_info)
+    ligand_list = get_ligands(file_info, name_vals)
     ligs_unique = find_ligands_unique(ligand_list)
     ligs, filenames = write_mol2(ligs_unique, file_info)
     return ligs, filenames

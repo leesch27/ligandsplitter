@@ -1,11 +1,11 @@
-"""Functions used to create and validate ligands from a SMILES string."""
+"""Functions used to search for and create ligands."""
 from rdkit import Chem
 from openbabel import pybel
 import ipywidgets as widgets
 from ipywidgets import Text, Layout, Label, Box, HBox, Dropdown, Output
 import requests
-import rcsbsearchapi
-from rcsbsearchapi.search import AttributeQuery, Attr, TextQuery, ChemSimilarityQuery
+import rcsbapi
+from rcsbapi.search import AttributeQuery, Attr, TextQuery, ChemSimilarityQuery
 from IPython.display import display
 
 def create_search_for_expo():
@@ -14,12 +14,18 @@ def create_search_for_expo():
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    None
 
     Returns
     -------
-    None
+    attr_bool : dict
+        Dictionary of attribute booleans.
+    attr_val : dict
+        Dictionary of attribute values.
+    form_items1 : list
+        List of form items for the first half of the form.
+    form_items2 : list
+        List of form items for the second half of the form.
     """
     global attr_bool
     global attr_val
@@ -80,18 +86,61 @@ def create_search_for_expo():
     form_items2 = [attr1_val, attr2_val, attr3_val, attr4_val, attr5_val, attr6_val, attr7_val]
     return attr_bool, attr_val, form_items1, form_items2
 
+def create_search_for_na():
+    """
+    Replace this function and doc string for your own project.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    attr_bool : dict
+        Dictionary of attribute booleans.
+    attr_val : dict
+        Dictionary of attribute values.
+    form_items1 : list
+        List of form items for the first half of the form.
+    form_items2 : list
+        List of form items for the second half of the form.
+    """
+    global attr_bool
+    global attr_val
+    form_item_layout = Layout(
+    display='flex',
+    flex_flow='row',
+    justify_content='space-between')
+    style = {'description_width': 'initial'}
+
+    attr1 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of DNA Strands?:', style = style)
+    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of RNA Strands?', style = style)
+    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Length of Sequence?', style = style)
+    attr1_val = Text(value = '', placeholder='Type Number of DNA Strands Here', disabled=False)
+    attr2_val = Text(value = '', placeholder='Type Number of RNA Strands Here', disabled=False)
+    attr3_val = Text(value = '', placeholder='Type Length of Sequence Here', disabled=False)
+
+    attr_bool = {"attr1": attr1, "attr2": attr2, "attr3": attr3}
+    attr_val = {"attr1_val": attr1_val, "attr2_val": attr2_val, "attr3_val": attr3_val}
+
+    form_items1 = [attr1, attr2, attr3]
+    form_items2 = [attr1_val, attr2_val, attr3_val]
+    return attr_bool, attr_val, form_items1, form_items2
+
 def display_expo_form(form_items1, form_items2):
     """
     Replace this function and doc string for your own project.
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    form_items1 : list
+        List of form items for the first half of the form.
+    form_items2 : list
+        List of form items for the second half of the form.
 
     Returns
     -------
-    None
+    Form
     """
     form_1 = Box(form_items1, layout = Layout(
         display = 'flex',
@@ -115,12 +164,17 @@ def create_ligands_from_expo(attr_bool, attr_val):
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    attr_bool : dict
+        Dictionary of attribute booleans.
+    attr_val : dict
+        Dictionary of attribute values.
 
     Returns
     -------
-    None
+    result_lig : list
+        List of ligands that match the search criteria.
+    query : str
+        Query string used to search for ligands.
     """
     bool_vals = {}
     val_vals = {}
@@ -154,18 +208,72 @@ def create_ligands_from_expo(attr_bool, attr_val):
     result_lig = list(query())
     return result_lig, query
 
+def create_nucleic_acids(attr_bool, attr_val):
+    """
+    Replace this function and doc string for your own project.
+
+    Parameters
+    ----------
+    attr_bool : dict
+        Dictionary of attribute booleans.
+    attr_val : dict
+        Dictionary of attribute values.
+
+    Returns
+    -------
+    result_lig : list
+        List of ligands that match the search criteria.
+    query : str
+        Query string used to search for ligands.
+    """
+    bool_vals = {}
+    val_vals = {}
+    for value in attr_bool.keys():
+        bool_vals[value] = attr_bool[value].value
+    for value in attr_val.keys():
+        val_vals[value] = attr_val[value].value
+    bools = list(bool_vals.values())
+    values = list(val_vals.values())
+    q0 = AttributeQuery(attribute = "rcsb_entry_info.selected_polymer_entity_types", operator = "exact_match", value = "Nucleic acid (only)")
+    q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = int(values[0]))
+    q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = int(values[1]))
+    q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = int(values[2]))
+    
+    attr_list = [q1, q2, q3]
+    positives = [q0]
+    global query
+    for number, value in enumerate(bools):
+        if value == "Yes":
+            positives.append(attr_list[number])
+    if len(positives) > 0:
+        if len(positives) == 1:
+            query = positives[0]
+        else:
+            query = ' & '.join(x for x in positives)
+    else:
+        print("Invalid.")
+    result_lig = list(query())
+    return result_lig, query
+
 def create_ligands_from_smiles(num_of_ligs):
     """
     Replace this function and doc string for your own project.
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    num_of_ligs : int
+        Number of ligands to create.
 
     Returns
     -------
-    None
+    names_for_ligs : dict
+        Dictionary of ligand names.
+    smiles_for_ligs : dict
+        Dictionary of ligand SMILES strings.
+    form_items1 : list
+        List of form items for the first half of the form.
+    form_items2 : list
+        List of form items for the second half of the form.
     """
     form_item_layout = Layout(display='flex',flex_flow='row',justify_content='space-between')
     global names_for_ligs
@@ -186,28 +294,30 @@ def create_ligands_from_smiles(num_of_ligs):
     form_items1 = []
     form_items2 = []
     for list_number, name in enumerate(names_for_ligs):
-        temp_box = "box" + str(list_number)
         new_number = list_number + 1
         form_items1.append(Box([labels_name["name" + str(new_number)], names_for_ligs[name]], layout=form_item_layout))
         
     for list_number, smiles in enumerate(smiles_for_ligs):
-        temp_box = "box" + str(list_number)
         new_number = list_number + 1
         form_items2.append(Box([labels_smiles["scratch" + str(new_number)], smiles_for_ligs[smiles]], layout=form_item_layout))
     return names_for_ligs, smiles_for_ligs, form_items1, form_items2
 
-def display_form(num_of_ligs, form_items1, form_items2):
+def display_smiles_form(num_of_ligs, form_items1, form_items2):
     """
     Replace this function and doc string for your own project.
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    num_of_ligs : int
+        Number of ligands to create.
+    form_items1 : list
+        List of form items for the first half of the form.
+    form_items2 : list
+        List of form items for the second half of the form.
 
     Returns
     -------
-    None
+    Form
     """
     form1 = Box(form_items1, layout = Layout(
         display = 'flex',
@@ -233,12 +343,15 @@ def create_mols_from_smiles(num_of_ligs):
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    num_of_ligs : int
+        Number of ligands to create.
 
     Returns
     -------
-    None
+    name_vals : dict
+        Dictionary of ligand names.
+    scratch_vals : dict
+        Dictionary of ligand SMILES strings.
     """
     name_vals = {}
     scratch_vals = {}
