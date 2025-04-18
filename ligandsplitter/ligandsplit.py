@@ -77,7 +77,10 @@ def retrieve_pdb_file(pdb_id, format = ""):
         protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
     
         # isolate ligands and remove water molecules from PDB file
-        ligand = u.select_atoms("not protein and not resname HOH")
+        if type == "protein":
+            ligand = u.select_atoms("not protein and not resname HOH")
+        if type == "nucleic":
+            ligand = u.select_atoms("nucleic")
         try:
             ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
         except IndexError:
