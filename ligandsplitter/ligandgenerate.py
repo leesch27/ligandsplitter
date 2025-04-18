@@ -235,9 +235,18 @@ def create_nucleic_acids(attr_bool, attr_val):
     bools = list(bool_vals.values())
     values = list(val_vals.values())
     q0 = AttributeQuery(attribute = "rcsb_entry_info.selected_polymer_entity_types", operator = "exact_match", value = "Nucleic acid (only)")
-    q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = int(values[0]))
-    q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = int(values[1]))
-    q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = int(values[2]))
+    if bools[0] == "Yes":
+        q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = int(values[0]))
+    else:
+        q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = 0)
+    if bools[1] == "Yes":
+        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = int(values[1]))
+    else:
+        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = 0)
+    if bools[2] == "Yes":
+        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = int(values[2]))
+    else:
+        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = 0)
     
     attr_list = [q1, q2, q3]
     positives = [q0]
