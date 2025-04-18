@@ -161,7 +161,7 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
             clean_ligand_exists = False
     elif format == "local":
         format_subset = pdb_id.split(".")[-1]
-        remainder = pdb_id.split(".")[:-1]
+        remainder = pdb_id.split(".")[0]
         short_filename = remainder.split("/")[-1]
         if (format_subset == "pdb") or (format == "ent"):
             u = mda.Universe(pdb_id)
