@@ -44,7 +44,7 @@ class Ligand:
         self._lines_bond = lines_bond
         self.num_bonds = lines_bond[-1] - lines_bond[0] + 1
 
-def retrieve_pdb_file(pdb_id, format = ""):
+def retrieve_pdb_file(pdb_id, format = "", type = ""):
     """
     Replace this function and doc string for your own project.
 
