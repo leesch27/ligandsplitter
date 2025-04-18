@@ -73,14 +73,18 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
     if format == "pdb":
         pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
         u = mda.Universe(pdb_filename)
-        protein = u.select_atoms("protein")
-        protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+        if type == "protein":
+            protein = u.select_atoms("protein")
+            protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+        elif type == "nucleic":
+            protein = u.select_atoms("nucleic")
+            protein.write(f"data/PDB_files/{pdb_id}_nucleic.pdb")
     
         # isolate ligands and remove water molecules from PDB file
         if type == "protein":
             ligand = u.select_atoms("not protein and not resname HOH")
-        if type == "nucleic":
-            ligand = u.select_atoms("nucleic")
+        elif type == "nucleic":
+            ligand = u.select_atoms("not nucleic and not resname HOH")
         try:
             ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
         except IndexError:
