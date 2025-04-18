@@ -202,7 +202,7 @@ def create_ligands_from_expo(attr_bool, attr_val):
         if len(positives) == 1:
             query = positives[0]
         else:
-            query = ' & '.join(str(x) for x in positives)
+            query = ' & '.join(x for x in positives)
     else:
         print("Invalid.")
     result_lig = list(query())
@@ -258,7 +258,11 @@ def create_nucleic_acids(attr_bool, attr_val):
         if len(positives) == 1:
             query = positives[0]
         else:
-            query = ' & '.join(str(x) for x in positives)
+            current_len = 1
+            query = positives[0]
+            while current_len < len(positives):
+                query = query & positives[current_len]
+                current_len += 1
     else:
         print("Invalid.")
     result_lig = list(query())
