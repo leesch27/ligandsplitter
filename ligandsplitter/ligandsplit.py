@@ -161,8 +161,9 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
             clean_ligand_exists = False
     elif format == "local":
         format_subset = pdb_id.split(".")[-1]
-        short_filename = format.split("/")[-1]
-        if format_subset == "pdb" or format == "ent":
+        remainder = pdb_id.split(".")[:-1]
+        short_filename = remainder.split("/")[-1]
+        if (format_subset == "pdb") or (format == "ent"):
             u = mda.Universe(pdb_id)
             protein = u.select_atoms("protein")
             protein.write(f"data/PDB_files/{short_filename}_protein.pdb")
