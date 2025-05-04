@@ -2,8 +2,8 @@
 import sys, os
 import random
 import requests
-import rcsbsearchapi
-from rcsbsearchapi.search import AttributeQuery, Attr, TextQuery, ChemSimilarityQuery
+import rcsbapi
+from rcsbapi.search import AttributeQuery, Attr, TextQuery, ChemSimilarityQuery
 import ipywidgets as widgets
 from ipywidgets import FileUpload, Dropdown, Text, Layout, Label, Box, HBox, Button, Output
 from IPython.display import display
