@@ -9,7 +9,7 @@ dependencies:
   - python
   - pip
   - ipywidgets
-  - Bio
+  - biopython
   - MDAnalysis
   - openbabel
   - rdkit
