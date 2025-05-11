@@ -4,16 +4,21 @@ from rdkit import RDLogger
 
 def parse_unique_ligands(smiles_list, ligs):
     """
-    Replace this function and doc string for your own project.
+    Determine unique ligands from a list of SMILES strings.
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    smiles_list : list
+        List of SMILES strings representing ligands.
+    ligs : list
+        List of ligand identifiers.
 
     Returns
     -------
-    None
+    ligs : list
+        List of unique ligand identifiers.
+    filenames : list
+        List of filenames corresponding to the unique ligands.
     """
     new_ligs = []
     new_filenames = []
@@ -37,16 +42,19 @@ def parse_unique_ligands(smiles_list, ligs):
 
 def validate_unique_ligands(ligs):
     """
-    Replace this function and doc string for your own project.
+    Ensure that ligands follow the correct format and do not violate atomic properties (e.g. number of bonds per atom) and are unique.
 
     Parameters
     ----------
-    pdb_id : String
-        Set whether or not to display who the quote is from.
+    ligs : list
+        List of ligand identifiers.
 
     Returns
     -------
-    None
+    ligs : list
+        List of unique ligand identifiers.
+    filenames : list
+        List of filenames corresponding to the unique ligands.
     """
     RDLogger.DisableLog('rdApp.*') 
     mol_list = []

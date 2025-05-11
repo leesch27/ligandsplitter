@@ -171,10 +171,15 @@ def group_idxes_from_mol(lig):
     """
     Create data path/dir and sub folders for each file type, return error if exists
 
+    
+    Parameters
+    ----------
+    lig : RDKIT molecule
+        Ligand of interest.
     Returns
     -------
-    current_dir : str
-        Current directory that is in use.
+    match_indexes : dict
+        Dictionary of functional groups and their corresponding atom indexes in the ligand.
     """
     match_indexes = {}
     mol = lig

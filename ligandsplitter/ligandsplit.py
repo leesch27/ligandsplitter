@@ -44,7 +44,7 @@ class Ligand:
 
 def retrieve_pdb_file(pdb_id, format = "", type = ""):
     """
-    Replace this function and doc string for your own project.
+    Retrieve PDB/MMCIF file from RCSB database and isolate macromolecule from ligands/ions.
 
     Parameters
     ----------
@@ -163,7 +163,7 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
         format_subset = pdb_id.split(".")[-1]
         remainder = pdb_id.split(".")[0]
         short_filename = remainder.split("/")[-1]
-        if (format_subset == "pdb") or (format == "ent"):
+        if ("pdb" in format_subset) or ("ent" in format_subset):
             u = mda.Universe(pdb_id)
             protein = u.select_atoms("protein")
             protein.write(f"data/PDB_files/{short_filename}_protein.pdb")
@@ -203,7 +203,7 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
             except FileNotFoundError:
                 clean_ligand_exists = False
                 print("")
-        elif format_subset == "cif":
+        elif "cif" in format_subset:
             # parse mmcif file and produce a pdb file with only the protein present
             p = MMCIFParser()
             struc_prot = p.get_structure("", pdb_id)
@@ -240,6 +240,7 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
             if atom_lines_added == 0:
                 clean_ligand_exists = False
         else:
+            print("Unable to upload local file. Please ensure the file is in either pdb or mmcif format.")
             clean_ligand_exists = False
     else:
         clean_ligand_exists = False
@@ -268,16 +269,16 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
 
 def get_mol2_info(ligand_file):
     """
-    Replace this function and doc string for your own project.
+    Get MOL2 file information from a ligand file and create a File_Info object.
 
     Parameters
     ----------
     ligand_file : String
-        Set whether or not to display who the quote is from.
+        Name of MOL2 containing ligand information.
 
     Returns
     -------
-    None
+    File_Info object
     """
     tripos_mol = []
     tripos_atom = []
@@ -332,7 +333,7 @@ def get_mol2_info(ligand_file):
 
 def get_ligands(file_info, name_vals = {}):
     """
-    Replace this function and doc string for your own project.
+    Get ligand information from a File_Info object and create a list of all ligands present.
 
     Parameters
     ----------
@@ -344,7 +345,8 @@ def get_ligands(file_info, name_vals = {}):
 
     Returns
     -------
-    None
+    ligand_list : list
+        List of all ligands in File_Info object
     """
     ligs_temp = []
     lig_loc = []
@@ -420,16 +422,17 @@ def get_ligands(file_info, name_vals = {}):
 
 def find_ligands_unique(ligand_list):
     """
-    Replace this function and doc string for your own project.
+    Find all unique ligands in a list of ligands.
 
     Parameters
     ----------
     ligand_list : list
-        Set whether or not to display who the quote is from.
+        List of ligands.
 
     Returns
     -------
-    None
+    ligs_unique : list
+        List of unique ligands
     """
     # get unique ligands based on ligand names
     ligs_unique = []
@@ -443,17 +446,20 @@ def find_ligands_unique(ligand_list):
 
 def write_mol2(ligs_unique, file_info):
     """
-    Replace this function and doc string for your own project.
+    Write a MOL2 file for each unique ligand in the list of ligands.
 
     Parameters
     ----------
-    ligs_unique : String
-        Set whether or not to display who the quote is from.
+    ligs_unique : List
+        List of unique ligands
     file_info : File_Info object
 
     Returns
     -------
-    None
+    ligs : list
+        List of ligand names
+    filenames : list
+        List of filenames for each ligand
     """
     global ligs # name of ligands
     global filenames # resulting file names for each ligand
@@ -539,17 +545,20 @@ def write_mol2(ligs_unique, file_info):
 
 def separate_mol2_ligs(filename = '', name_vals = {}):
     """
-    Replace this function and doc string for your own project.
+    Split a ligand file into individual ligands and write them to separate MOL2 files.
 
     Parameters
     ----------
     filename : String
-        Set whether or not to display who the quote is from.
+        Filename of the ligand file to be split and parsed.
     name_vals : dict
 
     Returns
     -------
-    None
+    ligs : list
+        List of ligand names
+    filenames : list
+        List of filenames for each ligand
     """
     current_dir = os.getcwd()
     ligand_file = os.path.join(current_dir, filename)
