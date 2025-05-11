@@ -8,6 +8,11 @@ dependencies:
     # Base depends
   - python
   - pip
+  - ipywidgets
+  - Bio
+  - MDAnalysis
+  - openbabel
+  - rdkit
   
   - pydata-sphinx-theme
   - sphinx-design
