@@ -19,4 +19,5 @@ dependencies:
     # Pip-only installs
   - pip:
     - -e ../
+    - rcsb-api
 
