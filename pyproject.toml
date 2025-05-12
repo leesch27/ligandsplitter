@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ligandsplitter"
 description = "A python package for splitting, creating, and validating ligand files"
-dynamic = ["version"]
+version = "1.0"
 readme = "README.md"
 authors = [
     { name = "Lee Schoneman", email = "kes6022@rit.edu" }
