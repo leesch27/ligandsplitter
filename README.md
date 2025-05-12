@@ -9,25 +9,20 @@ A Python package for splitting, creating, and validating ligand files
 
 ### Usage
 
-This repository is currently not meant to be used as a standalone program and was made to enhance a series of notebooks that explore molecular docking using Jupyter notebooks. This repository, called basil_dock, is currently being developed and will be released in the near future.
+This repository was initially made to enhance a series of notebooks that explore molecular docking using Jupyter notebooks. This repository, called basil_dock, is currently being developed and will be released in the near future. Work is being done to allow for the execution of ligandsplitter code as a stand-alone program.
 
 ### Installation
 
-When cloning the basil_dock, make sure to initialize the submodule. This can be done in one of two ways:
-1. Clone basil_dock before initializing submodule
+
+1. Manual
 ```
-git clone <url to basil_dock>
+git clone https://github.com/leesch27/ligandsplitter.git
 ```
+2. PyPi
 ```
-cd ligandsplitter
+pip install ligandsplitter
 ```
-```
-git submodule update --init --recursive
-```
-2. Clone basil_dock and initialize submodule at the same time
-```
-git clone --recurse-submodules <url to basil_dock>
-```
+
 ### Copyright
 
 Copyright (c) 2024, Lee Schoneman
