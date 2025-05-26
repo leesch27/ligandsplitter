@@ -20,6 +20,7 @@ def parse_unique_ligands(smiles_list, ligs):
     filenames : list
         List of filenames corresponding to the unique ligands.
     """
+
     new_ligs = []
     new_filenames = []
     exclude_ligs = []
@@ -56,6 +57,7 @@ def validate_unique_ligands(ligs):
     filenames : list
         List of filenames corresponding to the unique ligands.
     """
+    
     RDLogger.DisableLog('rdApp.*') 
     mol_list = []
     smiles_list = []

@@ -9,11 +9,13 @@ dependencies:
 
     # Package dependencies
   - numpy==1.26.4
+  - pandas
   - rdkit
   - openbabel
   - MDAnalysis
   - biopython
   - ipywidgets
+  - scikit-learn
 
     # Testing
   - pytest

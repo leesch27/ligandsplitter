@@ -1,10 +1,20 @@
 """Provide the primary functions."""
 import sys, os
 from rdkit import Chem
+import pandas as pd
+from sklearn.model_selection import RandomizedSearchCV, train_test_split, cross_val_score, cross_validate
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.compose import ColumnTransformer, make_column_transformer
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 def get_vars():
     """
     Initialize essential variables for ligand analysis
+
+    Parameters
+    ----------
+    None
 
     Returns
     -------
@@ -169,13 +179,13 @@ def get_vars():
 
 def group_idxes_from_mol(lig):
     """
-    Create data path/dir and sub folders for each file type, return error if exists
+    Get atom indices of functional groups in a ligand molecule.
 
-    
     Parameters
     ----------
     lig : RDKIT molecule
         Ligand of interest.
+
     Returns
     -------
     match_indexes : dict
@@ -198,3 +208,133 @@ def group_idxes_from_mol(lig):
                     else:
                         match_indexes[subind] = list(str(functional_groups_dict[j]))
     return match_indexes
+
+def rf_classifier(data, method = ""):
+    """
+    Determine the importance of ligand features in whether they are orally bioactive or not using a Random Forest Classifier.
+    
+    Parameters
+    ----------
+    data : dataframe
+        Data containing physical properties of ligand of interest.
+    method : String
+        Method to use for analysis. Options are "LRO5", "Ghose", or "Veber".
+
+    Returns
+    -------
+    imps : dataframe
+        Dataframe containing feature importances of the model.
+    """
+
+    # get feature and target variables
+    if method == "LRO5":
+        features = data.drop(columns = ["filename_hydrogens", "smiles", "mol_refractivity", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+    elif method == "Ghose":
+        features = data.drop(columns = ["filename_hydrogens", "smiles", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+    elif method == "Veber":
+        features = data.drop(columns = ["filename_hydrogens", "smiles", "orally_bioactive", "mol"])
+    else:
+        print("Please provide a valid method: LRO5, Ghose, or Veber.")
+    target = data["orally_bioactive"]
+
+    # define training and testing data
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size = 0.2)
+    rf_c = RandomForestClassifier()
+    rf_c.fit(X_train, y_train)
+    scores_rf_c = cross_validate(rf_c, X_train, y_train, return_train_score=True)
+    print(f"Initial cross-validation fit time: {scores_rf_c['fit_time']}")
+    print(f"Initial cross-validation score time: {scores_rf_c['score_time']}")
+    print(f"Initial cross-validation training scores: {scores_rf_c['train_score']}")
+    print(f"Initial cross-validation testing scores: {scores_rf_c['test_score']}")
+
+    # hyperparameter optimization
+    print("Starting hyperparameter optimization...")
+    rf_param_grid = {
+        "max_depth": [1, 5, 10, 15, 20],
+        "max_features": [1, 5, 10, 15, 20],
+        "min_samples_split": [10, 20, 30, 40, 50],
+        "min_samples_leaf": [5, 10, 15, 20]
+    }
+    rf_random_search = RandomizedSearchCV(
+        RandomForestClassifier(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5, random_state=123
+    )
+    print("Done!")
+
+    # create and deploy optimized model
+    print("Fitting optimized model...")
+    rf_random_search.fit(X_train, y_train)
+    optimized_rf_c = pd.DataFrame(rf_random_search.cv_results_)[["mean_test_score","param_max_depth","param_max_features", "param_min_samples_split", "param_min_samples_leaf", "mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
+    max_depth_val = float(optimized_rf_c.iloc[1,1])
+    max_features_val = float(optimized_rf_c.iloc[1,2])
+    min_sample_split_val = float(optimized_rf_c.iloc[1,3])
+    min_samples_leaf_val = float(optimized_rf_c.iloc[1,4])
+    rf_optimal = RandomForestClassifier(max_depth = max_depth_val, max_features = max_features_val, min_samples_split = min_sample_split_val, min_samples_leaf = min_samples_leaf_val)
+    rf_optimal.fit(X_train, y_train)
+    rf_optimal.score(X_test, y_test)
+
+    # obtain feature importance
+    feature_names = list(X_train.columns)
+    data = {
+        "Importance": rf_optimal.feature_importances_,
+    }
+    imps = pd.DataFrame(data=data, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
+    return imps
+
+def rf_regressor(data):
+    """
+    Determine the importance of ligand features in determining binding affinity.
+    
+    Parameters
+    ----------
+    data : dataframe
+        Data containing docking information between ligand/s of interest and receptor.
+
+    Returns
+    -------
+    imps : dataframe
+        Dataframe containing feature importances of the model.
+    """
+
+    features = data.drop(columns = ["Score"])
+    target = data["Score"]
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size = 0.2)
+    
+    # initial training
+    rf_r = RandomForestClassifier()
+    rf_r.fit(X_train, y_train)
+    scores_rf_r = cross_validate(rf_r, X_train, y_train, return_train_score=True)
+    print(f"Initial cross-validation fit time: {scores_rf_r['fit_time']}")
+    print(f"Initial cross-validation score time: {scores_rf_r['score_time']}")
+    print(f"Initial cross-validation training scores: {scores_rf_r['train_score']}")
+    print(f"Initial cross-validation testing scores: {scores_rf_r['test_score']}")
+
+    # hyperparameter optimization
+    print("Starting hyperparameter optimization...")
+    rf_param_grid = {
+        "max_depth": [1, 5, 10, 15, 20],
+        "max_features": [1, 5, 10, 15, 20],
+        "min_samples_split": [10, 20, 30, 40, 50],
+        "min_samples_leaf": [5, 10, 15, 20]
+    }
+    rf_random_search = RandomizedSearchCV(RandomForestRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5, random_state=123)
+    print("Done!")
+
+    # create and deploy optimized model
+    print("Fitting optimized model...")
+    rf_random_search.fit(X_train, y_train)
+    optimized_rf_r = pd.DataFrame(rf_random_search.cv_results_)[["mean_test_score","param_max_depth","param_max_features", "param_min_samples_split", "param_min_samples_leaf", "mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
+    max_depth_val = float(optimized_rf_r.iloc[1,1])
+    max_features_val = float(optimized_rf_r.iloc[1,2])
+    min_sample_split_val = float(optimized_rf_r.iloc[1,3])
+    min_samples_leaf_val = float(optimized_rf_r.iloc[1,4])
+    rf_optimal = RandomForestClassifier(max_depth = max_depth_val, max_features = max_features_val, min_samples_split = min_sample_split_val, min_samples_leaf = min_samples_leaf_val)
+    rf_optimal.fit(X_train, y_train)
+    rf_optimal.score(X_test, y_test)
+
+    # obtain feature importance
+    feature_names = list(X_train.columns)
+    data = {
+        "Importance": rf_optimal.feature_importances_,
+    }
+    imps = pd.DataFrame(data=data, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
+    return imps

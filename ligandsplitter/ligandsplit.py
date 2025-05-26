@@ -1,14 +1,13 @@
 """Functions used to retrieve and split ligands from a PDB ID."""
 import numpy as np
-#import pandas as pd
 import re
 import sys, os
 from Bio.PDB import PDBList, PDBIO
 from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB.Polypeptide import is_aa
 import MDAnalysis as mda 
 from openbabel import pybel
 from .basefunctions import convert_type
-from .ligandgenerate import create_ligands_from_smiles, create_mols_from_smiles
 
 class File_Info:
     def __init__(self, tripos_mol, tripos_atom, tripos_bond, lines_mols, lines_atoms, lines_bonds):
@@ -42,7 +41,7 @@ class Ligand:
         self._lines_bond = lines_bond
         self.num_bonds = lines_bond[-1] - lines_bond[0] + 1
 
-def retrieve_pdb_file(pdb_id, format = "", type = ""):
+def retrieve_pdb_file(pdb_id, format = ""):
     """
     Retrieve PDB/MMCIF file from RCSB database and isolate macromolecule from ligands/ions.
 
@@ -62,6 +61,7 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
     global pdb_filename
     atom_lines_added = 0
     clean_ligand_exists = True
+    type = ""
     # List of residue names for elemental ions
     list_of_ions = ["AG", "AL", "AM", "AU", "AU3", "BA", "BR", "BS3", "CA", "CD", "CE", "CF", "CL", "CO", "3CO", "CR", 
                     "CS", "CU1", "CU", "CU3", "DY", "ER3", "EU3", "EU", "F", "FE", "FE2", "GA", "GD3", "HG", "IN", 'IOD', 
@@ -71,25 +71,21 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
     if format == "pdb":
         pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
         u = mda.Universe(pdb_filename)
-        if type == "protein":
+        try:
             protein = u.select_atoms("protein")
             protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
-        elif type == "nucleic":
+            type = "protein"
+        except:
             protein = u.select_atoms("nucleic")
             protein.write(f"data/PDB_files/{pdb_id}_nucleic.pdb")
+            type = "nucleic"
     
         # isolate ligands and remove water molecules from PDB file
-        if type == "protein":
-            ligand = u.select_atoms("not protein and not resname HOH")
-        elif type == "nucleic":
-            ligand = u.select_atoms("not nucleic and not resname HOH")
+        ligand = u.select_atoms(f"not {type} and not resname HOH")
         try:
             ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
         except IndexError:
-            if type == "protein":
-                print(f"Protein from PDB ID {pdb_id} has no ligands present. PDB file of protein has been saved to data/PDB_files/{pdb_id}_protein.pdb")
-            elif type == "nucleic":
-                print(f"Nucleic acid from PDB ID {pdb_id} has no additional ligands present. PDB file of nucleic acid has been saved to data/PDB_files/{pdb_id}_nucleic.pdb")
+            print(f"Macromolecule from PDB ID {pdb_id} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_{type}.pdb")
 
         try:
             with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb", 'w+') as datafile: 
@@ -118,23 +114,27 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
                         datafile.write(line)
         except FileNotFoundError:
             clean_ligand_exists = False
-            print("")
     elif format == "mmcif":
         pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="mmCif")
-        # parse mmcif file and produce a pdb file with only the protein present
+        # parse mmcif file and produce a pdb file with only the receptor present
         p = MMCIFParser()
         struc_prot = p.get_structure("", pdb_filename)
         for model in struc_prot:
             for chain in model:
                 for residue in list(chain):
+                    residue.get_resname()
                     res_id = residue.id
                     if res_id[0] != ' ':
                         chain.detach_child(res_id)
+                    else:
+                        is_protein = is_aa(residue)
         io = PDBIO()
         io.set_structure(struc_prot)
-        if type == "protein":
+        if is_protein == True:
+            type = "protein"
             io.save(f"data/PDB_files/{pdb_id}_protein.pdb")
-        elif type == "nucleic":
+        else:
+            type = "nucleic"
             io.save(f"data/PDB_files/{pdb_id}_nucleic.pdb")
         # get ligand information from mmcif file if available
         p = MMCIFParser()
@@ -165,16 +165,21 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
         short_filename = remainder.split("/")[-1]
         if ("pdb" in format_subset) or ("ent" in format_subset):
             u = mda.Universe(pdb_id)
-            protein = u.select_atoms("protein")
-            protein.write(f"data/PDB_files/{short_filename}_protein.pdb")
+            try:
+                protein = u.select_atoms("protein")
+                protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+                type = "protein"
+            except:
+                protein = u.select_atoms("nucleic")
+                protein.write(f"data/PDB_files/{pdb_id}_nucleic.pdb")
+                type = "nucleic"
     
             # isolate ligands and remove water molecules from PDB file
-            ligand = u.select_atoms("not protein and not resname HOH")
+            ligand = u.select_atoms(f"not {type} and not resname HOH")
             try:
                 ligand.write(f"data/PDB_files/{short_filename}_ligand.pdb")
             except IndexError:
-                print(f"Protein {short_filename} has no ligands present. PDB file of protein has been saved to data/PDB_files/{short_filename}_protein.pdb")
-
+                print(f"Macromolecule {short_filename} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{short_filename}_{type}.pdb")
             try:
                 with open(f"data/PDB_files/{short_filename}_clean_ligand.pdb", 'w+') as datafile: 
                     with open(f"data/PDB_files/{short_filename}_ligand.pdb","r") as outfile:
@@ -202,7 +207,6 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
                             datafile.write(line)
             except FileNotFoundError:
                 clean_ligand_exists = False
-                print("")
         elif "cif" in format_subset:
             # parse mmcif file and produce a pdb file with only the protein present
             p = MMCIFParser()
@@ -213,9 +217,16 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
                         res_id = residue.id
                         if res_id[0] != ' ':
                             chain.detach_child(res_id)
+                        else:
+                            is_protein = is_aa(residue)
             io = PDBIO()
             io.set_structure(struc_prot)
-            io.save(f"data/PDB_files/{short_filename}_protein.pdb")
+            if is_protein == True:
+                type = "protein"
+                io.save(f"data/PDB_files/{short_filename}_protein.pdb")
+            else:
+                type = "nucleic"
+                io.save(f"data/PDB_files/{short_filename}_nucleic.pdb")
             # get ligand information from mmcif file if available
             p = MMCIFParser()
             struc_lig = p.get_structure("", pdb_id)
@@ -244,13 +255,10 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
             clean_ligand_exists = False
     else:
         clean_ligand_exists = False
-        print("Invalid format entered. Please enter format as either pdb or mmcif, or select local to upload a local pdb or mmcif file.")
+        print("Invalid format entered. Please enter format as either pdb or mmcif, or as local to upload a local pdb or mmcif file.")
     # convert ligand pdb file to mol2 file, or return a warning if only elemental ions are present
     if atom_lines_added == 0 and clean_ligand_exists:
-        if type == "protein":
-            print(f"Warning: Ligands cannot be extracted from PDB ID {pdb_id} as only atomic ions are present. PDB file of protein has been saved to data/PDB_files/{pdb_id}_protein.pdb")
-        elif type == "nucleic":
-            print(f"Nucleic acid from PDB ID {pdb_id} has no additional ligands present. PDB file of nucleic acid has been saved to data/PDB_files/{pdb_id}_nucleic.pdb")
+        print(f"Warning: Ligands cannot be extracted from PDB ID {pdb_id} as only atomic ions are present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_{type}.pdb")
     elif clean_ligand_exists:
         if format == "local":
             pdb_mol2 = [m for m in pybel.readfile(filename = f"data/PDB_files/{short_filename}_clean_ligand.pdb", format='pdb')][0]
@@ -261,15 +269,63 @@ def retrieve_pdb_file(pdb_id, format = "", type = ""):
             pdb_mol2 = [m for m in pybel.readfile(filename = f"data/PDB_files/{pdb_id}_clean_ligand.pdb", format='pdb')][0]
             out_mol2 = pybel.Outputfile(filename = f"data/MOL2_files/{pdb_id}_ligand.mol2", overwrite = True, format='mol2')
             out_mol2.write(pdb_mol2)
-            if type == "protein":
-                print(f"Comprehensive ligand MOL2 file extracted from PDB ID {pdb_id} has been saved to data/MOL2_files/{pdb_id}_ligand.mol2")
-            elif type == "nucleic":
-                print(f"Nucleic acid from PDB ID {pdb_id} has additional ligands present. Comprehensive ligand MOL2 file extracted from PDB ID {pdb_id} has been saved to data/MOL2_files/{pdb_id}_ligand.mol2")
+            print(f"Comprehensive ligand MOL2 file extracted from PDB ID {pdb_id} has been saved to data/MOL2_files/{pdb_id}_ligand.mol2")
     print("Download completed.")
+    return type
+
+def isolate_by_method(method, file_format, name = "", upload = {}):
+    """
+    Isolate protein and ligand files based on the method of retrieval (manual entry, upload, or random PDB ID).
+
+    Parameters
+    ----------
+    method : String
+        Name of method used to isolate receptor from ligands (Manual text entry, Upload from local file, Advanced Search, or Random).
+    file_format : String
+        Name of file format to be used (pdb or mmcif) or "local" if uploading a local file.
+    name : String
+        Name of PDB ID or file name.
+    upload : dict
+        Dictionary containing the name of the uploaded file and its content.
+
+    Returns
+    -------
+    protein_filename : String
+        Name of the protein file.
+    ligand_filename_initial : String
+        Name of the ligand file.
+    """
+
+    # get PDB or MMCIF file from pdb.org using pdb id
+    pdb_id = ''
+    if (method == "Manual text entry") or (method == "Advanced Search") or (method == "Random"):
+        pdb_id = name.lower()
+        type = retrieve_pdb_file(pdb_id, file_format)
+        protein_filename = f"data/PDB_files/{pdb_id}_{type}.pdb"
+        ligand_filename_initial = f"data/MOL2_files/{pdb_id}_ligand.mol2"
+    
+    # get PDB or MMCIF file from local upload   
+    elif method == "Upload from local file":
+        # get information for uploaded file
+        prot_file = upload[0]['name']
+        # write the uploaded file to the local directory
+        with open("data/PDB_files/" + str(prot_file), "wb") as fp:
+            fp.write(upload[0]["content"])
+        # clean local protein file
+        proto_protein_filename = "data/PDB_files/" + str(prot_file)
+        short_proto_name = proto_protein_filename.split("/")[-1]
+        pdb_id = short_proto_name.split(".")[0]
+        # retrieve PDB file from local upload
+        type = retrieve_pdb_file(proto_protein_filename, "local")
+        protein_filename = f"data/PDB_files/{pdb_id}_{type}.pdb"
+        ligand_filename_initial = f"data/MOL2_files/{pdb_id}_ligand.mol2"
+    else:
+        print("Invalid method selected. Please select a valid method to retrieve the protein and ligand filenames.")
+    return protein_filename, ligand_filename_initial
 
 def get_mol2_info(ligand_file):
     """
-    Get MOL2 file information from a ligand file and create a File_Info object.
+    Get MOL2 file information from a ligand file to create a File_Info object.
 
     Parameters
     ----------
@@ -280,6 +336,7 @@ def get_mol2_info(ligand_file):
     -------
     File_Info object
     """
+
     tripos_mol = []
     tripos_atom = []
     tripos_bond = []
@@ -348,6 +405,7 @@ def get_ligands(file_info, name_vals = {}):
     ligand_list : list
         List of all ligands in File_Info object
     """
+
     ligs_temp = []
     lig_loc = []
     atoms = []
@@ -434,6 +492,7 @@ def find_ligands_unique(ligand_list):
     ligs_unique : list
         List of unique ligands
     """
+
     # get unique ligands based on ligand names
     ligs_unique = []
     ligs_repeat = []
@@ -461,6 +520,7 @@ def write_mol2(ligs_unique, file_info):
     filenames : list
         List of filenames for each ligand
     """
+
     global ligs # name of ligands
     global filenames # resulting file names for each ligand
     ligs = []
@@ -560,6 +620,7 @@ def separate_mol2_ligs(filename = '', name_vals = {}):
     filenames : list
         List of filenames for each ligand
     """
+
     current_dir = os.getcwd()
     ligand_file = os.path.join(current_dir, filename)
     file_info = get_mol2_info(ligand_file)
