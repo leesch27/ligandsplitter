@@ -321,7 +321,7 @@ def isolate_by_method(method, file_format, name = "", upload = {}):
         ligand_filename_initial = f"data/MOL2_files/{pdb_id}_ligand.mol2"
     else:
         print("Invalid method selected. Please select a valid method to retrieve the protein and ligand filenames.")
-    return protein_filename, ligand_filename_initial
+    return type, protein_filename, ligand_filename_initial
 
 def get_mol2_info(ligand_file):
     """
