@@ -87,47 +87,6 @@ def create_search_for_expo():
     form_items2 = [attr1_val, attr2_val, attr3_val, attr4_val, attr5_val, attr6_val, attr7_val]
     return attr_bool, attr_val, form_items1, form_items2
 
-def create_search_for_na():
-    """
-    Create a search form for nucleic acids in the RCSB PDB database.
-
-    Parameters
-    ----------
-    None
-
-    Returns
-    -------
-    attr_bool : dict
-        Dictionary of attribute booleans.
-    attr_val : dict
-        Dictionary of attribute values.
-    form_items1 : list
-        List of form items for the first half of the form.
-    form_items2 : list
-        List of form items for the second half of the form.
-    """
-
-    global attr_bool
-    global attr_val
-    form_item_layout = Layout(
-    display='flex',
-    flex_flow='row',
-    justify_content='space-between')
-    style = {'description_width': 'initial'}
-
-    attr1 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of DNA Strands?:', style = style)
-    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of RNA Strands?', style = style)
-    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Length of Sequence?', style = style)
-    attr1_val = Text(value = '', placeholder='Type Number of DNA Strands Here', disabled=False)
-    attr2_val = Text(value = '', placeholder='Type Number of RNA Strands Here', disabled=False)
-    attr3_val = Text(value = '', placeholder='Type Length of Sequence Here', disabled=False)
-
-    attr_bool = {"attr1": attr1, "attr2": attr2, "attr3": attr3}
-    attr_val = {"attr1_val": attr1_val, "attr2_val": attr2_val, "attr3_val": attr3_val}
-
-    form_items1 = [attr1, attr2, attr3]
-    form_items2 = [attr1_val, attr2_val, attr3_val]
-    return attr_bool, attr_val, form_items1, form_items2
 
 def create_search_for_protein():
     """
@@ -256,66 +215,6 @@ def create_ligands_from_expo(attr_bool, attr_val):
     result_lig = list(query())
     return result_lig, query
 
-def create_nucleic_acids(attr_bool, attr_val):
-    """
-    Create a search query for nucleic acids in the RCSB PDB database based on user input.
-
-    Parameters
-    ----------
-    attr_bool : dict
-        Dictionary of attribute booleans.
-    attr_val : dict
-        Dictionary of attribute values.
-
-    Returns
-    -------
-    result_lig : list
-        List of nucleic acids that match the search criteria.
-    query : str
-        Query string used to search for receptors.
-    """
-
-    bool_vals = {}
-    val_vals = {}
-    for value in attr_bool.keys():
-        bool_vals[value] = attr_bool[value].value
-    for value in attr_val.keys():
-        val_vals[value] = attr_val[value].value
-    bools = list(bool_vals.values())
-    values = list(val_vals.values())
-    q0 = AttributeQuery(attribute = "rcsb_entry_info.selected_polymer_entity_types", operator = "exact_match", value = "Nucleic acid (only)")
-    if bools[0] == "Yes":
-        q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = int(values[0]))
-    else:
-        q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = 0)
-    if bools[1] == "Yes":
-        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = int(values[1]))
-    else:
-        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = 0)
-    if bools[2] == "Yes":
-        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = int(values[2]))
-    else:
-        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = 0)
-    
-    attr_list = [q1, q2, q3]
-    positives = [q0]
-    global query
-    for number, value in enumerate(bools):
-        if value == "Yes":
-            positives.append(attr_list[number])
-    if len(positives) > 0:
-        if len(positives) == 1:
-            query = positives[0]
-        else:
-            current_len = 1
-            query = positives[0]
-            while current_len < len(positives):
-                query = query & positives[current_len]
-                current_len += 1
-    else:
-        print("Invalid.")
-    result = list(query())
-    return result, query
 
 def create_proteins(attr_bool, attr_val):
     """
