@@ -4,6 +4,7 @@ import re
 import sys, os
 from Bio.PDB import PDBList, PDBIO
 from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB.Polypeptide import is_aa
 import MDAnalysis as mda 
 from openbabel import pybel
 from .basefunctions import convert_type
@@ -60,6 +61,7 @@ def retrieve_pdb_file(pdb_id, format = ""):
     global pdb_filename
     atom_lines_added = 0
     clean_ligand_exists = True
+    type = ""
     # List of residue names for elemental ions
     list_of_ions = ["AG", "AL", "AM", "AU", "AU3", "BA", "BR", "BS3", "CA", "CD", "CE", "CF", "CL", "CO", "3CO", "CR", 
                     "CS", "CU1", "CU", "CU3", "DY", "ER3", "EU3", "EU", "F", "FE", "FE2", "GA", "GD3", "HG", "IN", 'IOD', 
@@ -69,15 +71,21 @@ def retrieve_pdb_file(pdb_id, format = ""):
     if format == "pdb":
         pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
         u = mda.Universe(pdb_filename)
-        protein = u.select_atoms("protein")
-        protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+        try:
+            protein = u.select_atoms("protein")
+            protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+            type = "protein"
+        except:
+            protein = u.select_atoms("nucleic")
+            protein.write(f"data/PDB_files/{pdb_id}_nucleic.pdb")
+            type = "nucleic"
     
         # isolate ligands and remove water molecules from PDB file
-        ligand = u.select_atoms(f"not protein and not resname HOH")
+        ligand = u.select_atoms(f"not {type} and not resname HOH")
         try:
             ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
         except IndexError:
-            print(f"Macromolecule from PDB ID {pdb_id} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_protein.pdb")
+            print(f"Macromolecule from PDB ID {pdb_id} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_{type}.pdb")
 
         try:
             with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb", 'w+') as datafile: 
@@ -118,9 +126,16 @@ def retrieve_pdb_file(pdb_id, format = ""):
                     res_id = residue.id
                     if res_id[0] != ' ':
                         chain.detach_child(res_id)
+                    else:
+                        is_protein = is_aa(residue)
         io = PDBIO()
         io.set_structure(struc_prot)
-        io.save(f"data/PDB_files/{pdb_id}_protein.pdb")
+        if is_protein == True:
+            type = "protein"
+            io.save(f"data/PDB_files/{pdb_id}_protein.pdb")
+        else:
+            type = "nucleic"
+            io.save(f"data/PDB_files/{pdb_id}_nucleic.pdb")
         # get ligand information from mmcif file if available
         p = MMCIFParser()
         struc_lig = p.get_structure("", pdb_filename)
@@ -150,15 +165,21 @@ def retrieve_pdb_file(pdb_id, format = ""):
         short_filename = remainder.split("/")[-1]
         if ("pdb" in format_subset) or ("ent" in format_subset):
             u = mda.Universe(pdb_id)
-            protein = u.select_atoms("protein")
-            protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+            try:
+                protein = u.select_atoms("protein")
+                protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
+                type = "protein"
+            except:
+                protein = u.select_atoms("nucleic")
+                protein.write(f"data/PDB_files/{pdb_id}_nucleic.pdb")
+                type = "nucleic"
     
             # isolate ligands and remove water molecules from PDB file
-            ligand = u.select_atoms(f"not protein and not resname HOH")
+            ligand = u.select_atoms(f"not {type} and not resname HOH")
             try:
                 ligand.write(f"data/PDB_files/{short_filename}_ligand.pdb")
             except IndexError:
-                print(f"Macromolecule {short_filename} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{short_filename}_protein.pdb")
+                print(f"Macromolecule {short_filename} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{short_filename}_{type}.pdb")
             try:
                 with open(f"data/PDB_files/{short_filename}_clean_ligand.pdb", 'w+') as datafile: 
                     with open(f"data/PDB_files/{short_filename}_ligand.pdb","r") as outfile:
@@ -196,9 +217,16 @@ def retrieve_pdb_file(pdb_id, format = ""):
                         res_id = residue.id
                         if res_id[0] != ' ':
                             chain.detach_child(res_id)
+                        else:
+                            is_protein = is_aa(residue)
             io = PDBIO()
             io.set_structure(struc_prot)
-            io.save(f"data/PDB_files/{short_filename}_protein.pdb")
+            if is_protein == True:
+                type = "protein"
+                io.save(f"data/PDB_files/{short_filename}_protein.pdb")
+            else:
+                type = "nucleic"
+                io.save(f"data/PDB_files/{short_filename}_nucleic.pdb")
             # get ligand information from mmcif file if available
             p = MMCIFParser()
             struc_lig = p.get_structure("", pdb_id)
@@ -230,7 +258,7 @@ def retrieve_pdb_file(pdb_id, format = ""):
         print("Invalid format entered. Please enter format as either pdb or mmcif, or as local to upload a local pdb or mmcif file.")
     # convert ligand pdb file to mol2 file, or return a warning if only elemental ions are present
     if atom_lines_added == 0 and clean_ligand_exists:
-        print(f"Warning: Ligands cannot be extracted from PDB ID {pdb_id} as only atomic ions are present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_protein.pdb")
+        print(f"Warning: Ligands cannot be extracted from PDB ID {pdb_id} as only atomic ions are present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_{type}.pdb")
     elif clean_ligand_exists:
         if format == "local":
             pdb_mol2 = [m for m in pybel.readfile(filename = f"data/PDB_files/{short_filename}_clean_ligand.pdb", format='pdb')][0]
@@ -243,6 +271,7 @@ def retrieve_pdb_file(pdb_id, format = ""):
             out_mol2.write(pdb_mol2)
             print(f"Comprehensive ligand MOL2 file extracted from PDB ID {pdb_id} has been saved to data/MOL2_files/{pdb_id}_ligand.mol2")
     print("Download completed.")
+    return type
 
 def isolate_by_method(method, file_format, name = "", upload = {}):
     """
@@ -271,8 +300,8 @@ def isolate_by_method(method, file_format, name = "", upload = {}):
     pdb_id = ''
     if (method == "Manual text entry") or (method == "Advanced Search") or (method == "Random"):
         pdb_id = name.lower()
-        retrieve_pdb_file(pdb_id, file_format)
-        protein_filename = f"data/PDB_files/{pdb_id}_protein.pdb"
+        type = retrieve_pdb_file(pdb_id, file_format)
+        protein_filename = f"data/PDB_files/{pdb_id}_{type}.pdb"
         ligand_filename_initial = f"data/MOL2_files/{pdb_id}_ligand.mol2"
     
     # get PDB or MMCIF file from local upload   
@@ -287,12 +316,12 @@ def isolate_by_method(method, file_format, name = "", upload = {}):
         short_proto_name = proto_protein_filename.split("/")[-1]
         pdb_id = short_proto_name.split(".")[0]
         # retrieve PDB file from local upload
-        retrieve_pdb_file(proto_protein_filename, "local")
-        protein_filename = f"data/PDB_files/{pdb_id}_protein.pdb"
+        type = retrieve_pdb_file(proto_protein_filename, "local")
+        protein_filename = f"data/PDB_files/{pdb_id}_{type}.pdb"
         ligand_filename_initial = f"data/MOL2_files/{pdb_id}_ligand.mol2"
     else:
         print("Invalid method selected. Please select a valid method to retrieve the protein and ligand filenames.")
-    return protein_filename, ligand_filename_initial
+    return type, protein_filename, ligand_filename_initial
 
 def get_mol2_info(ligand_file):
     """
@@ -343,20 +372,13 @@ def get_mol2_info(ligand_file):
             if len(tripos_atom) > (instance + 1):
                 for linenum, line in enumerate(data):
                     for i in range((linenum > value) and (linenum < tripos_atom[instance + 1])):
-                        try:
-                            if (convert_type(line.split()[0])) and (len(line.split()) == 4):
-                                temp_bonds.append(line)
-                        except:
-                            pass
-                            
+                        if (convert_type(line.split()[0])) and (len(line.split()) == 4):
+                            temp_bonds.append(line)
             else:
                 for linenum, line in enumerate(data):
                     for i in range(linenum > value):
-                        try:
-                            if (convert_type(line.split()[0])) and (len(line.split()) == 4):
-                                temp_bonds.append(line)
-                        except:
-                            pass
+                        if (convert_type(line.split()[0])) and (len(line.split()) == 4):
+                            temp_bonds.append(line)
             # sort temp_bonds by atom numbers
             temp_bonds.sort(key=lambda x: int(x.split()[1]))
             for num, line in enumerate(temp_bonds):
@@ -401,6 +423,7 @@ def get_ligands(file_info, name_vals = {}):
                     keys = list(name_vals.values())
                     lig_atom[-2] = keys[UNL1_count]
                     lig1 = keys[UNL1_count]
+                    UNL1_count += 1
             except:
                 pass
         # if a ligand is not in the list of identified ligands and is not labeled as 
@@ -408,23 +431,17 @@ def get_ligands(file_info, name_vals = {}):
         if (lig1 not in ligs_temp) & (lig1 != 'UNL1'):
             ligs_temp.append(lig1)
             lig_loc.append(int(linenum))
-            if (len(name_vals) > 0 and lig1 in name_vals):
-                UNL1_count += 1
         # if the number corresponding to the order of atoms is equal to one, it means
         # these atoms belong to a new ligand, record the line number
         elif (int(lig_atom[0]) == 1):
             ligs_temp.append(lig1)
             lig_loc.append(int(linenum))
-            if (len(name_vals) > 0 and lig1 in name_vals):
-                UNL1_count += 1
         # if a ligand is in the list of identified ligands and is a different ligand 
         # than the one in the line above it, the new ligand is a duplicate of a previously
         # identified ligand, record the line number
         elif ((lig1 in ligs_temp) and (lig1 != ligs_temp[-1])):
             ligs_temp.append(lig1)
             lig_loc.append(int(linenum))
-            if (len(name_vals) > 0 and lig1 in name_vals):
-                UNL1_count += 1
     lig_loc.append(len(file_info.lines_atoms))
     # get list containing the number of atoms present in each ligand
     d = 0
@@ -432,47 +449,22 @@ def get_ligands(file_info, name_vals = {}):
         atoms_1 = lig_loc[d + 1] - lig_loc[d]
         atoms.append(int(atoms_1))
         d += 1
-    
+    lig_loc_bond = []
+    lig_loc_bond.append(0)
+    bonds = []
     # get bond locations for each ligand
-    lig_loc_bond = [] # bond locations/indexes for each ligand
-    lig_loc_bond.append(0) # first ligand starts at line 0
-    all_bonds = [] # list of all bonds in the file (contains numbers for atoms bonded to each other)
-    temp_ligand_number = 0 # current ligand being processed
-    #print(f"atom list: {atoms}") #TEST TEST
-    for linenum, line in enumerate(file_info.lines_bonds): 
-        ligand = line
-        #print(f"Processing line {linenum}: {ligand}") #TEST TEST
-        bond_num = ligand.split()
-        atom_cap = atoms[temp_ligand_number]
-        atom_sum = sum(atoms[:temp_ligand_number]) # sum of atoms in previous ligands
-        bond_atom1 = int(bond_num[1])
-        bond_atom2 = int(bond_num[2])
-        if (len(all_bonds) > 0):
-            #print(f"Current bond: {bond_atom1} - {bond_atom2}, Atom cap: {atom_cap}, Temp ligand number: {temp_ligand_number}, Last atom location: {all_bonds[-1][0]} - {all_bonds[-1][1]}") #TEST TEST
-            # if the current atom number is reset to one or if the numbers for the atoms in the bond are greater than or equal to the sum of atoms in current ligands,
-            # increment ligand number and record the line number
-            if ((bond_atom1 == 1 and all_bonds[-1][0] > 1)):
-                temp_ligand_number += 1
-                atom_cap = atoms[temp_ligand_number]
-                atom_sum = sum(atoms[:temp_ligand_number])
-                lig_loc_bond.append(linenum)
-        all_bonds.append([bond_atom1, bond_atom2])
-        # if the ligand number is greater than 0 and if the numbers for the atoms in the bondare less than or equal to the sum of atoms in previous ligands,
-        # subtract the number of atoms in previous ligands to the atom numbers in the bond line to account for the offset in numbering
-        if (temp_ligand_number > 0 and (max(bond_atom1, bond_atom2) > atom_cap)):
-            bond_atom1 = bond_atom1 - atom_sum
-            bond_atom2 = bond_atom2 - atom_sum
-        if(max(bond_atom1, bond_atom2) > atom_cap):
-            temp_ligand_number += 1
-            atom_cap = atoms[temp_ligand_number]
-            atom_sum = sum(atoms[:temp_ligand_number])
-            lig_loc_bond.append(linenum)
-        #if (max(bond_atom1, bond_atom2) <= atom_cap and min(bond_atom1, bond_atom2) > atom_sum):
-    lig_loc_bond.append(len(file_info.lines_bonds)) # last ligand ends at the last line of the file
-    
-    #print(f"atom ligand locations: {lig_loc}") #TEST TEST
-    #print(f"bond ligand locations: {lig_loc_bond}") #TEST TEST
-
+    for ligand_number, atom in enumerate(atoms):
+        ligand_bonds = []
+        for linenum, line in enumerate(file_info.lines_bonds):
+            ligand = line
+            bond_num = ligand.split()
+            bond_atom1 = int(bond_num[1])
+            bond_atom2 = int(bond_num[2])
+            if (max(bond_atom1, bond_atom2) <= (sum(atoms[:ligand_number]) + atom) and min(bond_atom1, bond_atom2) > sum(atoms[:ligand_number])):
+                ligand_bonds.append(linenum)
+        if len(ligand_bonds) > 0:
+            bonds.append(len(ligand_bonds))
+            lig_loc_bond.append(ligand_bonds[-1] + 1)
     # create Ligand instances for each ligand
     ligand_list = []
     for ligand_number, ligand in enumerate(ligs_temp):
@@ -583,9 +575,7 @@ def write_mol2(ligs_unique, file_info):
                     temp_bond[1] = temp_bond[1] + (" " * (len_diff))
                 else:
                     temp_bond[1] = temp_bond[1][:(len_space + 1 - len_diff)]
-            if (unique_ind > 0 and (max(int(temp_bond[4]), int(temp_bond[6])) > unique_lig.num_atoms)):
-                temp_bond[4] = str(int(temp_bond[4]) - previous_atoms)
-                temp_bond[6] = str(int(temp_bond[6]) - previous_atoms)
+            temp_bond[4] = str(int(temp_bond[4]) - previous_atoms)
             if (len(temp_bond[4]) != len(original_values[1])):
                 len_diff = len(original_values[1]) - len(temp_bond[4])
                 len_space = len(temp_bond[3])
@@ -593,7 +583,7 @@ def write_mol2(ligs_unique, file_info):
                     temp_bond[3] = temp_bond[3] + (" " * (len_diff))
                 else:
                     temp_bond[3] = temp_bond[3][:(len_space + 1 - len_diff)]
-            #temp_bond[6] = str(int(temp_bond[6]) - previous_atoms)
+            temp_bond[6] = str(int(temp_bond[6]) - previous_atoms)
             if (len(temp_bond[6]) != len(original_values[2])):
                 len_diff = len(original_values[2]) - len(temp_bond[6])
                 len_space = len(temp_bond[5])
@@ -613,7 +603,7 @@ def write_mol2(ligs_unique, file_info):
         infile.close()
     return ligs, filenames
 
-def separate_mol2_ligs(filename = '', name_vals = {}, current_dir = os.getcwd()):
+def separate_mol2_ligs(filename = '', name_vals = {}):
     """
     Split a ligand file into individual ligands and write them to separate MOL2 files.
 
@@ -631,7 +621,7 @@ def separate_mol2_ligs(filename = '', name_vals = {}, current_dir = os.getcwd())
         List of filenames for each ligand
     """
 
-    #current_dir = os.getcwd()
+    current_dir = os.getcwd()
     ligand_file = os.path.join(current_dir, filename)
     file_info = get_mol2_info(ligand_file)
     ligand_list = get_ligands(file_info, name_vals)
