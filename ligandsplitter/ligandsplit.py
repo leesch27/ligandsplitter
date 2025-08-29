@@ -18,10 +18,15 @@ class File_Info:
         self.lines_bonds = lines_bonds
 
 class Ligand:
-    def __init__(self, name, lines_atom, lines_bond):
+    def __init__(self, name, lines_mol, lines_atom, lines_bond):
         self.name = name
+        self.lines_mol = lines_mol
         self.lines_atom = lines_atom
         self.lines_bond = lines_bond
+    @property
+    def lines_mol(self):
+        return self._lines_mol
+
     @property
     def lines_atom(self):
         return self._lines_atom
@@ -29,6 +34,15 @@ class Ligand:
     @property
     def lines_bond(self):
         return self._lines_bond
+    
+    @lines_mol.setter
+    def lines_mol(self, lines_mol):
+        self._lines_mol = lines_mol
+        self.mol_header = lines_mol[0]
+        self.mol_name = lines_mol[1]
+        self.mol_info = lines_mol[2]
+        self.mol_type = lines_mol[3]
+        self.charge_type = lines_mol[4]
         
     @lines_atom.setter
     def lines_atom(self, lines_atom):
@@ -256,7 +270,7 @@ def isolate_by_method(method, file_format, name = "", upload = {}):
         Name of file format to be used (pdb or mmcif) or "local" if uploading a local file.
     name : String
         Name of PDB ID or file name.
-    upload : dict
+    upload : tuple(dict)
         Dictionary containing the name of the uploaded file and its content.
 
     Returns
@@ -393,38 +407,33 @@ def get_ligands(file_info, name_vals = {}):
         ligand = line
         lig_atom = ligand.split()
         lig1 = str(lig_atom[-2])
-        # if a ligand is not in the list of identified ligands and is labeled as 
-        # "UNL1", attempt to rename it using the name_vals dictionary
-        if 'UNL' in lig1:
-            try:
-                if (len(name_vals) > 0):
-                    keys = list(name_vals.values())
-                    lig_atom[-2] = keys[UNL1_count]
-                    lig1 = keys[UNL1_count]
-            except:
-                pass
+        # if the name_vals dictionary exists, use it to name ligands
+        if (len(name_vals) > 0):
+            keys = list(name_vals.values())
+            lig_atom[-2] = keys[UNL1_count] #doesnt do anything
+            lig1 = keys[UNL1_count]
         # if a ligand is not in the list of identified ligands and is not labeled as 
         # "UNL1", record the line number
-        if (lig1 not in ligs_temp) & (lig1 != 'UNL1'):
+        if (lig1 not in ligs_temp) & (lig1 != 'UNL1') & (len(name_vals) == 0):
             ligs_temp.append(lig1)
             lig_loc.append(int(linenum))
-            if (len(name_vals) > 0 and lig1 in name_vals):
-                UNL1_count += 1
+            
         # if the number corresponding to the order of atoms is equal to one, it means
         # these atoms belong to a new ligand, record the line number
         elif (int(lig_atom[0]) == 1):
+            if (len(name_vals) > 0) & (len(ligs_temp) > 0):
+                UNL1_count += 1
+                lig1 = keys[UNL1_count]
             ligs_temp.append(lig1)
             lig_loc.append(int(linenum))
-            if (len(name_vals) > 0 and lig1 in name_vals):
-                UNL1_count += 1
+            
         # if a ligand is in the list of identified ligands and is a different ligand 
         # than the one in the line above it, the new ligand is a duplicate of a previously
         # identified ligand, record the line number
         elif ((lig1 in ligs_temp) and (lig1 != ligs_temp[-1])):
             ligs_temp.append(lig1)
             lig_loc.append(int(linenum))
-            if (len(name_vals) > 0 and lig1 in name_vals):
-                UNL1_count += 1
+            
     lig_loc.append(len(file_info.lines_atoms))
     # get list containing the number of atoms present in each ligand
     d = 0
@@ -475,15 +484,18 @@ def get_ligands(file_info, name_vals = {}):
 
     # create Ligand instances for each ligand
     ligand_list = []
+    iter = 0
     for ligand_number, ligand in enumerate(ligs_temp):
+        mol_info = [file_info.lines_mols[iter], file_info.lines_mols[iter + 1], file_info.lines_mols[iter + 2], file_info.lines_mols[iter + 3], file_info.lines_mols[iter + 4]]
         ligand_atom1 = lig_loc[ligand_number]
         ligand_atom2 = lig_loc[ligand_number + 1] - 1
         atoms_for_ligand = [ligand_atom1, ligand_atom2]
         ligand_bond1 = lig_loc_bond[ligand_number]
         ligand_bond2 = lig_loc_bond[ligand_number + 1] - 1
         bonds_for_ligand = [ligand_bond1, ligand_bond2]
-        new_lig = Ligand(name = ligand, lines_atom = atoms_for_ligand, lines_bond = bonds_for_ligand)
+        new_lig = Ligand(name = ligand, lines_mol = mol_info, lines_atom = atoms_for_ligand, lines_bond = bonds_for_ligand)
         ligand_list.append(new_lig)
+        iter += 5
     return ligand_list
 
 def find_ligands_unique(ligand_list):
@@ -540,8 +552,8 @@ def write_mol2(ligs_unique, file_info):
         filenames.append(filename)
         infile = open(filename, "w") 
         tripos_mols = []
-        # write molecule info for ligand
-        for line in file_info.lines_mols:
+        # write molecule info for ligand mol2 file
+        for line in unique_lig.lines_mol:
             tripos_mols.append(line)
         temp_mol = re.split(r"(\s+)", tripos_mols[2])
         temp_mol[2] = unique_lig.num_atoms
@@ -549,7 +561,7 @@ def write_mol2(ligs_unique, file_info):
         new_mol = ''.join(str(x) for x in temp_mol)
         tripos_mols[2] = new_mol
         tripos_mols.append("\n")
-        # write atoms for ligand
+        # write atom info for ligand mol2 file
         tripos_atoms = ["@<TRIPOS>ATOM\n"]
         counter_atom = 1
         atom1 = unique_lig.lines_atom[0]
@@ -566,7 +578,7 @@ def write_mol2(ligs_unique, file_info):
             tripos_atoms.append(new_atom)
             counter_atom += 1
             atom1 += 1
-        # write bonds for ligand
+        # write bonds info for ligand mol2 file
         tripos_bonds = ["@<TRIPOS>BOND\n"]
         counter_bond = 1
         bond1 = unique_lig.lines_bond[0]
