@@ -410,7 +410,6 @@ def get_ligands(file_info, name_vals = {}):
         # if the name_vals dictionary exists, use it to name ligands
         if (len(name_vals) > 0):
             keys = list(name_vals.values())
-            lig_atom[-2] = keys[UNL1_count] #doesnt do anything
             lig1 = keys[UNL1_count]
         # if a ligand is not in the list of identified ligands and is not labeled as 
         # "UNL1", record the line number
@@ -447,10 +446,14 @@ def get_ligands(file_info, name_vals = {}):
     lig_loc_bond.append(0) # first ligand starts at line 0
     all_bonds = [] # list of all bonds in the file (contains numbers for atoms bonded to each other)
     temp_ligand_number = 0 # current ligand being processed
+
     #print(f"atom list: {atoms}") #TEST TEST
+
     for linenum, line in enumerate(file_info.lines_bonds): 
         ligand = line
+
         #print(f"Processing line {linenum}: {ligand}") #TEST TEST
+
         bond_num = ligand.split()
         atom_cap = atoms[temp_ligand_number]
         atom_sum = sum(atoms[:temp_ligand_number]) # sum of atoms in previous ligands
@@ -458,6 +461,7 @@ def get_ligands(file_info, name_vals = {}):
         bond_atom2 = int(bond_num[2])
         if (len(all_bonds) > 0):
             #print(f"Current bond: {bond_atom1} - {bond_atom2}, Atom cap: {atom_cap}, Temp ligand number: {temp_ligand_number}, Last atom location: {all_bonds[-1][0]} - {all_bonds[-1][1]}") #TEST TEST
+            
             # if the current atom number is reset to one or if the numbers for the atoms in the bond are greater than or equal to the sum of atoms in current ligands,
             # increment ligand number and record the line number
             if ((bond_atom1 == 1 and all_bonds[-1][0] > 1)):
@@ -466,7 +470,7 @@ def get_ligands(file_info, name_vals = {}):
                 atom_sum = sum(atoms[:temp_ligand_number])
                 lig_loc_bond.append(linenum)
         all_bonds.append([bond_atom1, bond_atom2])
-        # if the ligand number is greater than 0 and if the numbers for the atoms in the bondare less than or equal to the sum of atoms in previous ligands,
+        # if the ligand number is greater than 0 and if the numbers for the atoms in the bond are less than or equal to the sum of atoms in previous ligands,
         # subtract the number of atoms in previous ligands to the atom numbers in the bond line to account for the offset in numbering
         if (temp_ligand_number > 0 and (max(bond_atom1, bond_atom2) > atom_cap)):
             bond_atom1 = bond_atom1 - atom_sum
@@ -476,7 +480,6 @@ def get_ligands(file_info, name_vals = {}):
             atom_cap = atoms[temp_ligand_number]
             atom_sum = sum(atoms[:temp_ligand_number])
             lig_loc_bond.append(linenum)
-        #if (max(bond_atom1, bond_atom2) <= atom_cap and min(bond_atom1, bond_atom2) > atom_sum):
     lig_loc_bond.append(len(file_info.lines_bonds)) # last ligand ends at the last line of the file
     
     #print(f"atom ligand locations: {lig_loc}") #TEST TEST
@@ -486,13 +489,18 @@ def get_ligands(file_info, name_vals = {}):
     ligand_list = []
     iter = 0
     for ligand_number, ligand in enumerate(ligs_temp):
+        # get molecule info for each ligand
+        # molecule info for each ligand consists of five lines: tripos header, ligand name, ligand info (atom count, bond count, etc), molecule type, and charge type
         mol_info = [file_info.lines_mols[iter], file_info.lines_mols[iter + 1], file_info.lines_mols[iter + 2], file_info.lines_mols[iter + 3], file_info.lines_mols[iter + 4]]
+        # get atom info for each ligand
         ligand_atom1 = lig_loc[ligand_number]
         ligand_atom2 = lig_loc[ligand_number + 1] - 1
         atoms_for_ligand = [ligand_atom1, ligand_atom2]
+        # get bond info for each ligand
         ligand_bond1 = lig_loc_bond[ligand_number]
         ligand_bond2 = lig_loc_bond[ligand_number + 1] - 1
         bonds_for_ligand = [ligand_bond1, ligand_bond2]
+        # create ligand instance with relevant information and add to list of ligands
         new_lig = Ligand(name = ligand, lines_mol = mol_info, lines_atom = atoms_for_ligand, lines_bond = bonds_for_ligand)
         ligand_list.append(new_lig)
         iter += 5
@@ -541,20 +549,22 @@ def write_mol2(ligs_unique, file_info):
         List of filenames for each ligand
     """
 
-    global ligs # name of ligands
-    global filenames # resulting file names for each ligand
+    global ligs # list of names for each ligand
+    global filenames # list of resulting file names for each ligand
     ligs = []
     filenames = []
     previous_atoms = 0
     for unique_ind, unique_lig in enumerate(ligs_unique):
+        # add ligand name to lig list and create a mol2 file for it
         ligs.append(unique_lig.name)
         filename = "data/MOL2_files/" + str(unique_lig.name) + ".mol2"
         filenames.append(filename)
         infile = open(filename, "w") 
-        tripos_mols = []
         # write molecule info for ligand mol2 file
+        tripos_mols = []
         for line in unique_lig.lines_mol:
             tripos_mols.append(line)
+        # update ligand info line (contains atom count, bond count, etc) to be correct for separated ligand (i.e. make sure it doesnt contain counts for all ligands combined)
         temp_mol = re.split(r"(\s+)", tripos_mols[2])
         temp_mol[2] = unique_lig.num_atoms
         temp_mol[4] = unique_lig.num_bonds
@@ -564,13 +574,15 @@ def write_mol2(ligs_unique, file_info):
         # write atom info for ligand mol2 file
         tripos_atoms = ["@<TRIPOS>ATOM\n"]
         counter_atom = 1
-        atom1 = unique_lig.lines_atom[0]
-        atom2 = unique_lig.lines_atom[-1]
+        atom1 = unique_lig.lines_atom[0] # lower limit/starting value for atom numbers
+        atom2 = unique_lig.lines_atom[-1] # upper limit for atom numbers
         while atom1 <= atom2:
+            # get line in original combined mol2 file corresponding to index of atom1
             temp_atom = re.split(r"(\s+)", file_info.lines_atoms[atom1])
             temp_atom = temp_atom[:-1]
             original_values = file_info.lines_atoms[atom1].split()
             temp_atom[2] = str(counter_atom)
+            # if atom number has changed length, adjust spacing
             if len(temp_atom[2]) > 1 and (len(temp_atom[2]) != len(original_values[0])):
                 len_space = len(temp_atom[1])
                 temp_atom[1] = temp_atom[1][:(len_space + 1 - len(temp_atom[2]))]
@@ -581,13 +593,15 @@ def write_mol2(ligs_unique, file_info):
         # write bonds info for ligand mol2 file
         tripos_bonds = ["@<TRIPOS>BOND\n"]
         counter_bond = 1
-        bond1 = unique_lig.lines_bond[0]
-        bond2 = unique_lig.lines_bond[1]
+        bond1 = unique_lig.lines_bond[0] # lower limit/starting value for bond numbers
+        bond2 = unique_lig.lines_bond[1] # upper limit for bond numbers
         while bond1 <= bond2:
+            # get line in original combined mol2 file corresponding to index of bond1
             temp_bond = re.split(r"(\s+)", file_info.lines_bonds[bond1])
             temp_bond = temp_bond[:-1]
             original_values = file_info.lines_bonds[bond1].split()
             temp_bond[2] = str(counter_bond)
+            # if bond number has changed length, adjust spacing
             if (len(temp_bond[2]) != len(original_values[0])):
                 len_diff = len(original_values[0]) - len(temp_bond[2])
                 len_space = len(temp_bond[1])
@@ -595,9 +609,11 @@ def write_mol2(ligs_unique, file_info):
                     temp_bond[1] = temp_bond[1] + (" " * (len_diff))
                 else:
                     temp_bond[1] = temp_bond[1][:(len_space + 1 - len_diff)]
+            # confirm that numbers for atoms in bond are consistant with atom numbering system in atom info
             if (unique_ind > 0 and (max(int(temp_bond[4]), int(temp_bond[6])) > unique_lig.num_atoms)):
                 temp_bond[4] = str(int(temp_bond[4]) - previous_atoms)
                 temp_bond[6] = str(int(temp_bond[6]) - previous_atoms)
+            # if the length of the number corresponding to the first atom in the bond has changed, adjust spacing
             if (len(temp_bond[4]) != len(original_values[1])):
                 len_diff = len(original_values[1]) - len(temp_bond[4])
                 len_space = len(temp_bond[3])
@@ -605,7 +621,7 @@ def write_mol2(ligs_unique, file_info):
                     temp_bond[3] = temp_bond[3] + (" " * (len_diff))
                 else:
                     temp_bond[3] = temp_bond[3][:(len_space + 1 - len_diff)]
-            #temp_bond[6] = str(int(temp_bond[6]) - previous_atoms)
+            # if the length of the number corresponding to the second atom in the bond has changed, adjust spacing
             if (len(temp_bond[6]) != len(original_values[2])):
                 len_diff = len(original_values[2]) - len(temp_bond[6])
                 len_space = len(temp_bond[5])
