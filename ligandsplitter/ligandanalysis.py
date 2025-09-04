@@ -1,6 +1,9 @@
 """Provide the primary functions."""
 import sys, os
+import numpy as np
+import re
 from rdkit import Chem
+from rdkit.Chem import Descriptors, AllChem, Draw, Crippen, Lipinski
 import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV, train_test_split, cross_val_score, cross_validate
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
@@ -177,7 +180,7 @@ def get_vars():
     }
     return all_func_groups, type_dict, functional_groups, functional_groups_dict, groups_to_numbers, groups_dict
 
-def group_idxes_from_mol(lig):
+def group_idxes_from_mol(lig, renumber = False):
     """
     Get atom indices of functional groups in a ligand molecule.
 
@@ -193,20 +196,24 @@ def group_idxes_from_mol(lig):
     """
     match_indexes = {}
     mol = lig
-    mol_neworder = tuple(zip(*sorted([(j, i) for i, j in enumerate(Chem.CanonicalRankAtoms(mol))])))[1]
-    mol_renum = Chem.RenumberAtoms(mol, mol_neworder)
+    if renumber:
+        mol_neworder = tuple(zip(*sorted([(j, i) for i, j in enumerate(Chem.CanonicalRankAtoms(mol))])))[1]
+        mol_renum = Chem.RenumberAtoms(mol, mol_neworder)
+    else:
+        mol_renum = mol
     for j in functional_groups:
         k = Chem.MolFromSmarts(j)
         if mol_renum.HasSubstructMatch(k):
             idxes = mol_renum.GetSubstructMatches(k)
-            idxes_list = list(idxes)
+            dict_keys = list(match_indexes.keys())
             for index in idxes:
                 for subind in index:
-                    if len(match_indexes[subind]) != 0:
-                        temp_match = list(match_indexes[subind].values())
-                        match_indexes[subind] = temp_match.append(str(functional_groups_dict[j]))
+                    subind_string = str(subind)
+                    if subind_string in dict_keys:
+                        temp_match = match_indexes[subind_string]
+                        match_indexes[subind_string] = temp_match.append(functional_groups_dict[j])
                     else:
-                        match_indexes[subind] = list(str(functional_groups_dict[j]))
+                        match_indexes[subind_string] = [functional_groups_dict[j]]
     return match_indexes
 
 def rf_classifier(data, method = ""):
@@ -338,3 +345,212 @@ def rf_regressor(data):
     }
     imps = pd.DataFrame(data=data, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
     return imps
+
+def number_of_atoms(atom_list, df):
+    """
+    Determine the number of atoms each ligand has for a given dataframe.
+    
+    Parameters
+    ----------
+    atom_list : list
+        List of atom name abbreviations.
+    df : dataframe
+        Data containing initial data on ligand properties.
+
+    Returns
+    -------
+    None
+    """
+    # determine the number of different heavy atoms in each ligand
+    for i in atom_list:
+        substruct_list = []
+        for index, row in df.iterrows():
+            smile_string = row['smiles']
+            if len(i) == 1:
+                string_finder_lower = re.findall(r'{}(?![aelu+][+\d])(?!([aeolu]+[+\d]))'.format(i.lower()), smile_string)
+                string_finder_upper = re.findall(r'{}(?![aelu+][+\d])(?!([aeolu]+[+\d]))'.format(i), smile_string)
+                substruct_list.append(len(string_finder_lower) + len(string_finder_upper))
+            else:
+                string_finder_brackets = re.findall(r'[\[]{}[\]]'.format(i), smile_string)
+                string_finder_charged = re.findall(r'[\[]{}[+][+\d]'.format(i), smile_string)
+                substruct_list.append(len(string_finder_brackets) + len(string_finder_charged))
+        df['num_of_{}_atoms'.format(i)] = substruct_list
+
+def atom_weights(df):
+    """
+    Calculate the weight of each ligand in a dataframe.
+    
+    Parameters
+    ----------
+    df : dataframe
+        Dataframe of ligand properties that includes atom counts (number_of_atoms function).
+
+    Returns
+    -------
+    None
+    """
+    # calculate weight of ligands
+    global atom_weights_dict
+    atom_weights_dict = {
+        'C':12.0096,
+        'N': 14.006,
+        'O': 15.999,
+        'F': 18.998,
+        'Al': 26.981,
+        'P': 30.974,
+        'S': 32.059,
+        'Cl': 35.45,
+        'Cr': 51.9961,
+        'Mn': 54.938,
+        'Fe': 55.845,
+        'Co': 58.933,
+        'Ni': 58.693,
+        'Cu': 63.546,
+        'Zn': 65.38,
+        'Ga': 69.723,
+        'Ge': 72.630,
+        'As': 74.921,
+        'Br': 79.901,
+        'Zr': 91.224,
+        'Mo': 95.95,
+        'Pd': 106.42,
+        'Ag': 107.8682,
+        'Cd': 112.414,
+        'In': 114.818,
+        'Sn': 118.71,
+        'Sb': 121.760,
+        'I': 126.904,
+        'Ir': 192.217,
+        'Pt': 195.08,
+        'Au': 196.966570,
+        'Hg': 200.592,
+        'Pb': 207.2,
+        'Bi': 208.980
+    }
+    ligand_weights = []
+    for index, row in df.iterrows():
+        ligand_atom_nums = sum(row[5:])
+        weight_da = 0
+        if row['num_of_heavy_atoms'] == ligand_atom_nums:
+            for num, column in enumerate(row[5:]):
+                column_title = list(df)[num + 5]
+                atom_name = re.split("_", column_title)
+                atom_type_weight = atom_weights_dict[atom_name[2]]
+                weight_da = weight_da + (atom_type_weight *  column)
+        weight_da = weight_da + ((row.iloc[3] - row.iloc[4]) * 1.007)
+        ligand_weights.append(weight_da)
+    df.insert(2, "molecular_weight", ligand_weights)
+
+def chemical_physical_properties(df):
+    """
+    Calculate various properties for each ligand in a dataframe.
+    
+    Parameters
+    ----------
+    df : dataframe
+        Data containing initial data on ligand properties.
+
+    Returns
+    -------
+    None
+    """
+    # calculate logP (partition coefficient), hydrogen bond donors, hydrogen bond acceptors,
+    # molar refractivity (Ghose filter), number of rotatable bonds (veber's rule) and polar surface
+    # area (veber's rule) of ligands
+    log_P = []
+    H_donors = []
+    H_acceptors = []
+    mol_mr = []
+    mol_rotatable = []
+    tpsas = []
+    for index, row in df.iterrows():
+        mol = row.iloc[3]
+        if type(mol) != float:
+            log = Crippen.MolLogP(mol)
+            log_P.append(log)
+            donor = Lipinski.NumHDonors(mol)
+            H_donors.append(donor)
+            acceptor = Lipinski.NumHAcceptors(mol)
+            H_acceptors.append(acceptor)
+            mr = Crippen.MolMR(mol)
+            mol_mr.append(mr)
+            rotatable = Lipinski.NumRotatableBonds(mol)
+            mol_rotatable.append(rotatable)
+            psa = Descriptors.TPSA(mol)
+            tpsas.append(psa)
+        else:
+            pass
+    df.insert(3, "log_P", log_P)
+    df.insert(4, "H_donors", H_donors)
+    df.insert(5, "H_acceptors", H_acceptors)
+    df.insert(6, "mol_refractivity", mol_mr)
+    df.insert(7, "rotatable_bonds", mol_rotatable)
+    df.insert(8, "polar_surface_area", tpsas)
+
+def get_ligand_properties(lig_df):
+    """
+    Determine the importance of ligand features in determining binding affinity.
+    
+    Parameters
+    ----------
+    lig_df : dataframe
+        Data containing initial data on ligand properties.
+
+    Returns
+    -------
+    updated_df : dataframe
+        Dataframe containing calculated ligand properties of interest.
+    """
+    # determine and record the number of atoms and the number of heavy atoms in each ligand
+    global atom_abbriv
+    atom_abbriv = ['C','N','O','F','Al','P','S','Cl','Cr','Mn','Fe','Co','Ni','Cu',
+               'Zn','Ga','Ge','As','Br','Zr','Mo','Pd','Ag','Cd','In','Sn','Sb',
+               'I','Ir','Pt','Au','Hg','Pb','Bi']
+
+    mol_format = []
+    atom_total = []
+    atom_total_heavy = []
+    updated_df = lig_df.copy()
+    for index, row in updated_df.iterrows():
+        try:
+            mol = Chem.MolFromMol2File(row['filename_hydrogens'],sanitize=False)
+            if mol is not None:
+                mol_H = Chem.AddHs(mol)
+                mol_format.append(mol_H)
+                mol_atoms = mol_H.GetNumAtoms()
+                atom_total.append(mol_atoms)
+                mol_atoms_heavy = mol_H.GetNumHeavyAtoms()
+                atom_total_heavy.append(mol_atoms_heavy)
+            else:
+                #currently only works for molecules containing only atoms with single letter names, need to fix
+                string = row['smiles']
+                string_alpha = re.findall(r'[a-zA-Z]', string)
+                string_H = re.findall(r'[H]', string)
+                mol_format.append(np.nan)
+                atom_total.append(len(string_alpha))
+                atom_total_heavy.append(len(string_alpha) - len(string_H))
+        except OSError:
+            mol = Chem.MolFromSmiles(row['smiles'])
+            if mol is not None:
+                mol_H = Chem.AddHs(mol)
+                mol_format.append(mol_H)
+                mol_atoms = mol_H.GetNumAtoms()
+                atom_total.append(mol_atoms)
+                mol_atoms_heavy = mol_H.GetNumHeavyAtoms()
+                atom_total_heavy.append(mol_atoms_heavy)
+            else:
+                #currently only works for molecules containing only atoms with single letter names, need to fix
+                string = row['smiles']
+                string_alpha = re.findall(r'[a-zA-Z]', string)
+                string_H = re.findall(r'[H]', string)
+                mol_format.append(np.nan)
+                atom_total.append(len(string_alpha))
+                atom_total_heavy.append(len(string_alpha) - len(string_H))
+    updated_df['mol'] = mol_format
+    updated_df['num_of_atoms'] = atom_total
+    updated_df['num_of_heavy_atoms'] = atom_total_heavy
+    number_of_atoms(atom_abbriv, updated_df)
+    atom_weights(updated_df)
+    chemical_physical_properties(updated_df)
+    
+    return updated_df
