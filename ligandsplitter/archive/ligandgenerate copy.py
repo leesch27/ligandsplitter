@@ -87,6 +87,47 @@ def create_search_for_expo():
     form_items2 = [attr1_val, attr2_val, attr3_val, attr4_val, attr5_val, attr6_val, attr7_val]
     return attr_bool, attr_val, form_items1, form_items2
 
+def create_search_for_na():
+    """
+    Create a search form for nucleic acids in the RCSB PDB database.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    attr_bool : dict
+        Dictionary of attribute booleans.
+    attr_val : dict
+        Dictionary of attribute values.
+    form_items1 : list
+        List of form items for the first half of the form.
+    form_items2 : list
+        List of form items for the second half of the form.
+    """
+
+    global attr_bool
+    global attr_val
+    form_item_layout = Layout(
+    display='flex',
+    flex_flow='row',
+    justify_content='space-between')
+    style = {'description_width': 'initial'}
+
+    attr1 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of DNA Strands?:', style = style)
+    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of RNA Strands?', style = style)
+    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Length of Sequence?', style = style)
+    attr1_val = Text(value = '', placeholder='Type Number of DNA Strands Here', disabled=False)
+    attr2_val = Text(value = '', placeholder='Type Number of RNA Strands Here', disabled=False)
+    attr3_val = Text(value = '', placeholder='Type Length of Sequence Here', disabled=False)
+
+    attr_bool = {"attr1": attr1, "attr2": attr2, "attr3": attr3}
+    attr_val = {"attr1_val": attr1_val, "attr2_val": attr2_val, "attr3_val": attr3_val}
+
+    form_items1 = [attr1, attr2, attr3]
+    form_items2 = [attr1_val, attr2_val, attr3_val]
+    return attr_bool, attr_val, form_items1, form_items2
 
 def create_search_for_protein():
     """
@@ -102,14 +143,10 @@ def create_search_for_protein():
         Dictionary of attribute booleans.
     attr_val : dict
         Dictionary of attribute values.
-    attr_comp : dict
-        Dictionary of comparison values.
     form_items1 : list
-        List of form items containing queries to search by.
+        List of form items for the first half of the form.
     form_items2 : list
-        List of form items containing target values for queries.
-    form_items3 : list
-        List of form items containing comparison operators for queries.
+        List of form items for the second half of the form.
     """
 
     global attr_bool
@@ -121,44 +158,31 @@ def create_search_for_protein():
     style = {'description_width': 'initial'}
 
     attr1 = Dropdown(options = ["No", "Yes"], description = 'Search by Enzyme Classification Name?:', style = style)
-    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Enzyme Classification Number?', style = style)
-    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of Protein Chains?', style = style)
-    attr4 = Dropdown(options = ["No", "Yes"], description = 'Search by Length of Sequence?', style = style)
-    attr5 = Dropdown(options = ["No", "Yes"], description = 'Search by Molecular Weight?', style = style)
-
+    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Number of Protein Chains?', style = style)
+    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Length of Sequence?', style = style)
+    attr4 = Dropdown(options = ["No", "Yes"], description = 'Search by Molecular Weight?', style = style)
     attr1_val = Text(value = '', placeholder='Type Enzyme Classification Name', disabled=False)
-    attr2_val = Text(value = '', placeholder='Type Enzyme Classification Number', disabled=False)
-    attr3_val = Text(value = '', placeholder='Type Number of Protein Chains Here', disabled=False)
-    attr4_val = Text(value = '', placeholder='Type Length of Sequence Here', disabled=False)
-    attr5_val = Text(value = '', placeholder='Type Molecular Weight Here', disabled=False)
+    attr2_val = Text(value = '', placeholder='Type Number of Protein Chains Here', disabled=False)
+    attr3_val = Text(value = '', placeholder='Type Length of Sequence Here', disabled=False)
+    attr4_val = Text(value = '', placeholder='Type Molecular Weight Here', disabled=False)
 
-    comp1_val = Dropdown(options = ["is", "is not empty"], description = 'Select Comparison Operator:', style = style)
-    comp2_val = Dropdown(options = ["is any of", "is not empty"], description = 'Select Comparison Operator:', style = style)
-    comp3_val = Dropdown(options = ["==", ">", ">=", "<", "<="], description = 'Select Comparison Operator:', style = style)
-    comp4_val = Dropdown(options = ["==", ">", ">=", "<", "<="], description = 'Select Comparison Operator:', style = style)
-    comp5_val = Dropdown(options = ["==", ">", ">=", "<", "<="], description = 'Select Comparison Operator:', style = style)
+    attr_bool = {"attr1": attr1, "attr2": attr2, "attr3": attr3, "attr4": attr4}
+    attr_val = {"attr1_val": attr1_val, "attr2_val": attr2_val, "attr3_val": attr3_val, "attr4_val": attr4_val}
 
-    attr_bool = {"attr1": attr1, "attr2": attr2, "attr3": attr3, "attr4": attr4, "attr5": attr5}
-    attr_val = {"attr1_val": attr1_val, "attr2_val": attr2_val, "attr3_val": attr3_val, "attr4_val": attr4_val, "attr5_val": attr5_val}
-    attr_comp = {"comp1_val": comp1_val, "comp2_val": comp2_val, "comp3_val": comp3_val, "comp4_val": comp4_val, "comp5_val": comp5_val}
+    form_items1 = [attr1, attr2, attr3, attr4]
+    form_items2 = [attr1_val, attr2_val, attr3_val, attr4_val]
+    return attr_bool, attr_val, form_items1, form_items2
 
-    form_items1 = [attr1, attr2, attr3, attr4, attr5]
-    form_items2 = [attr1_val, attr2_val, attr3_val, attr4_val, attr5_val]
-    form_items3 = [comp1_val, comp2_val, comp3_val, comp4_val, comp5_val]
-    return attr_bool, attr_val, attr_comp, form_items1, form_items2, form_items3
-
-def display_expo_form(form_items1, form_items2, form_items3 = []):
+def display_expo_form(form_items1, form_items2):
     """
     Display form generated by create_search_for_expo.
 
     Parameters
     ----------
     form_items1 : list
-        List of form items containing queries to search by.
+        List of form items for the first half of the form.
     form_items2 : list
-        List of form items containing target values for queries.
-    form_items3 : list (Optional)
-        List of form items containing comparison operators for queries.
+        List of form items for the second half of the form.
 
     Returns
     -------
@@ -177,17 +201,8 @@ def display_expo_form(form_items1, form_items2, form_items3 = []):
         border = 'solid 2px',
         align_items = 'stretch',
         width = '50%'))
-    if len(form_items3) > 0:
-        form_3 = Box(form_items3, layout = Layout(
-        display = 'flex',
-        flex_flow = 'column',
-        border = 'solid 2px',
-        align_items = 'stretch',
-        width = '50%'))
-        form = HBox([form_1, form_2, form_3])
-    else:
-        form = HBox([form_1, form_2])
 
+    form = HBox([form_1, form_2])
     return form
 
 def create_ligands_from_expo(attr_bool, attr_val):
@@ -241,8 +256,68 @@ def create_ligands_from_expo(attr_bool, attr_val):
     result_lig = list(query())
     return result_lig, query
 
+def create_nucleic_acids(attr_bool, attr_val):
+    """
+    Create a search query for nucleic acids in the RCSB PDB database based on user input.
 
-def create_proteins(attr_bool, attr_val, attr_comp):
+    Parameters
+    ----------
+    attr_bool : dict
+        Dictionary of attribute booleans.
+    attr_val : dict
+        Dictionary of attribute values.
+
+    Returns
+    -------
+    result_lig : list
+        List of nucleic acids that match the search criteria.
+    query : str
+        Query string used to search for receptors.
+    """
+
+    bool_vals = {}
+    val_vals = {}
+    for value in attr_bool.keys():
+        bool_vals[value] = attr_bool[value].value
+    for value in attr_val.keys():
+        val_vals[value] = attr_val[value].value
+    bools = list(bool_vals.values())
+    values = list(val_vals.values())
+    q0 = AttributeQuery(attribute = "rcsb_entry_info.selected_polymer_entity_types", operator = "exact_match", value = "Nucleic acid (only)")
+    if bools[0] == "Yes":
+        q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = int(values[0]))
+    else:
+        q1 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_DNA", operator = "equals", value = 0)
+    if bools[1] == "Yes":
+        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = int(values[1]))
+    else:
+        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_RNA", operator = "equals", value = 0)
+    if bools[2] == "Yes":
+        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = int(values[2]))
+    else:
+        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = 0)
+    
+    attr_list = [q1, q2, q3]
+    positives = [q0]
+    global query
+    for number, value in enumerate(bools):
+        if value == "Yes":
+            positives.append(attr_list[number])
+    if len(positives) > 0:
+        if len(positives) == 1:
+            query = positives[0]
+        else:
+            current_len = 1
+            query = positives[0]
+            while current_len < len(positives):
+                query = query & positives[current_len]
+                current_len += 1
+    else:
+        print("Invalid.")
+    result = list(query())
+    return result, query
+
+def create_proteins(attr_bool, attr_val):
     """
     Create a search query for proteins in the RCSB PDB database based on user input.
 
@@ -252,8 +327,6 @@ def create_proteins(attr_bool, attr_val, attr_comp):
         Dictionary of attribute booleans.
     attr_val : dict
         Dictionary of attribute values.
-    attr_comp : dict
-        Dictionary of comparison values.
 
     Returns
     -------
@@ -265,59 +338,31 @@ def create_proteins(attr_bool, attr_val, attr_comp):
 
     bool_vals = {}
     val_vals = {}
-    comp_vals = {}
-
     for value in attr_bool.keys():
         bool_vals[value] = attr_bool[value].value
     for value in attr_val.keys():
         val_vals[value] = attr_val[value].value
-    #translate initial comparison symbols into terms needed for search
-    for value in attr_comp.keys():
-        comp_vals_initial = attr_comp[value].value
-        if comp_vals_initial == "==":
-            comp_vals[value] = "equals"
-        elif comp_vals_initial == ">":
-            comp_vals[value] = "greater_than"
-        elif comp_vals_initial == ">=":
-            comp_vals[value] = "greater_or_equal"
-        elif comp_vals_initial == "<":
-            comp_vals[value] = "less_than"
-        elif comp_vals_initial == "<=":
-            comp_vals[value] = "less_or_equal"
-        elif comp_vals_initial == "is":
-            comp_vals[value] = "exact_match"
-        elif comp_vals_initial == "is not empty":
-            comp_vals[value] = "exists"
-        elif comp_vals_initial == "is any of":
-            comp_vals[value] = "in"
-  
     bools = list(bool_vals.values())
     values = list(val_vals.values())
-    comps = list(comp_vals.values())
-
     q0 = AttributeQuery(attribute = "rcsb_entry_info.selected_polymer_entity_types", operator = "exact_match", value = "Protein (only)")
     if bools[0] == "Yes":
-        q1 = AttributeQuery(attribute = "rcsb_polymer_entity.rcsb_ec_lineage.name", operator = comps[0], value = values[0])
+        q1 = AttributeQuery(attribute = "rcsb_polymer_entity.rcsb_ec_lineage.name", operator = "equals", value = values[0])
     else:
         q1 = AttributeQuery(attribute = "rcsb_polymer_entity.rcsb_ec_lineage.name", operator = "equals", value = "")
     if bools[1] == "Yes":
-        q2 = AttributeQuery(attribute = "rcsb_polymer_entity.rcsb_ec_lineage.id", operator = comps[1], value = values[1])
+        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_protein", operator = "equals", value = int(values[1]))
     else:
-        q2 = AttributeQuery(attribute = "rcsb_polymer_entity.rcsb_ec_lineage.id", operator = "equals", value = "")
+        q2 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_protein", operator = "equals", value = 0)
     if bools[2] == "Yes":
-        q3 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_protein", operator = comps[2], value = int(values[2]))
+        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = int(values[2]))
     else:
-        q3 = AttributeQuery(attribute = "rcsb_entry_info.polymer_entity_count_protein", operator = "equals", value = 0)
+        q3 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = 0)
     if bools[3] == "Yes":
-        q4 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = comps[3], value = int(values[3]))
+        q4 = AttributeQuery(attribute = "rcsb_entry_info.molecular_weight", operator = "equals", value = float(values[3]))
     else:
-        q4 = AttributeQuery(attribute = "entity_poly.rcsb_sample_sequence_length", operator = "equals", value = 0)
-    if bools[4] == "Yes":
-        q5 = AttributeQuery(attribute = "rcsb_entry_info.molecular_weight", operator = comps[4], value = float(values[4]))
-    else:
-        q5 = AttributeQuery(attribute = "rcsb_entry_info.molecular_weight", operator = "equals", value = 0)
+        q4 = AttributeQuery(attribute = "rcsb_entry_info.molecular_weight", operator = "equals", value = 0)
     
-    attr_list = [q1, q2, q3, q4, q5]
+    attr_list = [q1, q2, q3, q4]
     positives = [q0]
     global query
     for number, value in enumerate(bools):
@@ -421,7 +466,7 @@ def display_smiles_form(num_of_ligs, form_items1, form_items2):
     form = HBox([form1, form2])
     return form
 
-def create_mols_from_smiles(num_of_ligs, names_for_ligs, smiles_for_ligs, out_filename='InputMols.mol2'):
+def create_mols_from_smiles(num_of_ligs):
     """
     Generate ligand molecules from SMILES strings and save them in MOL2 format.
 
@@ -429,8 +474,6 @@ def create_mols_from_smiles(num_of_ligs, names_for_ligs, smiles_for_ligs, out_fi
     ----------
     num_of_ligs : int
         Number of ligands to create.
-    out_filename : str, optional
-        Name of the output file to save the generated molecules in MOL2 format. Default is 'data/MOL2_files/InputMols.mol2'.
 
     Returns
     -------
@@ -442,28 +485,26 @@ def create_mols_from_smiles(num_of_ligs, names_for_ligs, smiles_for_ligs, out_fi
 
     name_vals = {}
     scratch_vals = {}
-    name_keys = list(names_for_ligs.keys())
-    scratch_keys = list(smiles_for_ligs.keys())
-    for value in name_keys:
-        name_vals[value] = names_for_ligs[value]
+    for value in names_for_ligs.keys():
+        name_vals[value] = names_for_ligs[value].value
 
-    for value in scratch_keys:
-        scratch_vals[value] = smiles_for_ligs[value]
+    for value in smiles_for_ligs.keys():
+        scratch_vals[value] = smiles_for_ligs[value].value
     
     smiles = []
     smile_names = []
     a = 0
-    while a < num_of_ligs:
+    while a < num_of_ligs.value:
         name_temp = "name" + str(a + 1)
         scratch_temp = "scratch" + str(a + 1)
-        lig_name = name_vals[name_keys[a]]
-        lig_scratch = scratch_vals[scratch_keys[a]]
+        lig_name = name_vals[name_temp]
+        lig_scratch = scratch_vals[scratch_temp]
         lig_test = Chem.MolFromSmiles(lig_scratch)
         if (len(lig_scratch) < 2000) & (lig_test is not None):
             smile_names.append(lig_name)
             smiles.append(lig_scratch)
-        a += 1
-    out=pybel.Outputfile(filename = f"data/MOL2_files/{out_filename}",format='mol2',overwrite=True) # change output file name to a var to allow for users to choose name
+        a += 1   
+    out=pybel.Outputfile(filename='data/MOL2_files/InputMols.mol2',format='mol2',overwrite=True)
     for index, smi in enumerate(smiles):
         mol = pybel.readstring(string=smi,format='smiles')
         mol.title= str(smile_names[index])
