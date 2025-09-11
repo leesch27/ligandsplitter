@@ -487,11 +487,13 @@ def get_ligands(file_info, name_vals = {}):
 
     # create Ligand instances for each ligand
     ligand_list = []
-    iter = 0
     for ligand_number, ligand in enumerate(ligs_temp):
         # get molecule info for each ligand
         # molecule info for each ligand consists of five lines: tripos header, ligand name, ligand info (atom count, bond count, etc), molecule type, and charge type
-        mol_info = [file_info.lines_mols[iter], file_info.lines_mols[iter + 1], file_info.lines_mols[iter + 2], file_info.lines_mols[iter + 3], file_info.lines_mols[iter + 4]]
+        try:
+            mol_info = [file_info.lines_mols[ligand_number], file_info.lines_mols[ligand_number + 1], file_info.lines_mols[ligand_number + 2], file_info.lines_mols[ligand_number + 3], file_info.lines_mols[ligand_number + 4]]
+        except IndexError:
+            mol_info = [file_info.lines_mols[0], file_info.lines_mols[1], file_info.lines_mols[2], file_info.lines_mols[3], file_info.lines_mols[4]]
         # get atom info for each ligand
         ligand_atom1 = lig_loc[ligand_number]
         ligand_atom2 = lig_loc[ligand_number + 1] - 1
@@ -503,7 +505,6 @@ def get_ligands(file_info, name_vals = {}):
         # create ligand instance with relevant information and add to list of ligands
         new_lig = Ligand(name = ligand, lines_mol = mol_info, lines_atom = atoms_for_ligand, lines_bond = bonds_for_ligand)
         ligand_list.append(new_lig)
-        iter += 5
     return ligand_list
 
 def find_ligands_unique(ligand_list):

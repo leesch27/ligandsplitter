@@ -219,6 +219,50 @@ def create_folders():
         else:
             print(error)
     
+    # create vina_out file path/dir, return error if exists
+    vina_out = os.path.join(dataPath, "vina_out")
+    try:
+        os.mkdir(vina_out)
+        print("Created directory:", vina_out)
+    except OSError as error:
+        if error.errno == 17:
+            print("Directory exists:", vina_out)
+        else:
+            print(error)
+
+    # create vina_out_2 file path/dir, return error if exists
+    vina_out_2 = os.path.join(dataPath, "vina_out_2")
+    try:
+        os.mkdir(vina_out_2)
+        print("Created directory:", vina_out_2)
+    except OSError as error:
+        if error.errno == 17:
+            print("Directory exists:", vina_out_2)
+        else:
+            print(error)
+
+    # create smina_out file path/dir, return error if exists
+    smina_out = os.path.join(dataPath, "smina_out")
+    try:
+        os.mkdir(smina_out)
+        print("Created directory:", smina_out)
+    except OSError as error:
+        if error.errno == 17:
+            print("Directory exists:", smina_out)
+        else:
+            print(error)
+
+    # create smina_out_2 file path/dir, return error if exists
+    smina_out_2 = os.path.join(dataPath, "smina_out_2")
+    try:
+        os.mkdir(smina_out_2)
+        print("Created directory:", smina_out_2)
+    except OSError as error:
+        if error.errno == 17:
+            print("Directory exists:", smina_out_2)
+        else:
+            print(error)
+    
     return current_dir
 
 def convert_type(start_type):
