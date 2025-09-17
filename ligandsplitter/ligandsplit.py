@@ -91,7 +91,7 @@ def retrieve_pdb_file(pdb_id, format = ""):
         try:
             ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
         except IndexError:
-            print(f"Macromolecule from PDB ID {pdb_id} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_protein.pdb")
+            print(f"Macromolecule from PDB ID {pdb_id} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{short_filename}_protein.pdb")
 
         try:
             with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb", 'w+') as datafile: 
@@ -165,17 +165,18 @@ def retrieve_pdb_file(pdb_id, format = ""):
         if ("pdb" in format_subset) or ("ent" in format_subset):
             u = mda.Universe(pdb_id)
             protein = u.select_atoms("protein")
+            pdb_id = short_filename
             protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
     
             # isolate ligands and remove water molecules from PDB file
             ligand = u.select_atoms(f"not protein and not resname HOH")
             try:
-                ligand.write(f"data/PDB_files/{short_filename}_ligand.pdb")
+                ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
             except IndexError:
-                print(f"Macromolecule {short_filename} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{short_filename}_protein.pdb")
+                print(f"Macromolecule {pdb_id} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{pdb_id}_protein.pdb")
             try:
-                with open(f"data/PDB_files/{short_filename}_clean_ligand.pdb", 'w+') as datafile: 
-                    with open(f"data/PDB_files/{short_filename}_ligand.pdb","r") as outfile:
+                with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb", 'w+') as datafile: 
+                    with open(f"data/PDB_files/{pdb_id}_ligand.pdb","r") as outfile:
                         data = outfile.readlines()
                     for line in data:
                         if 'HETATM' in line:
@@ -228,8 +229,9 @@ def retrieve_pdb_file(pdb_id, format = ""):
                                     chain.detach_child(res_id)
             io = PDBIO()
             io.set_structure(struc_lig)
-            io.save(f"data/PDB_files/{short_filename}_clean_ligand.pdb")
-            with open(f"data/PDB_files/{short_filename}_clean_ligand.pdb","r") as outfile:
+            pdb_id = short_filename
+            io.save(f"data/PDB_files/{pdb_id}_clean_ligand.pdb")
+            with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb","r") as outfile:
                 data = outfile.readlines()
                 for line in data:
                     if 'HETATM' in line:
