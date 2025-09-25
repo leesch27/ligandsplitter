@@ -277,7 +277,10 @@ def atom_weights(df):
 
 def chemical_physical_properties(df):
     """
-    Calculate various properties for each ligand in a dataframe.
+    Calculate various properties for each ligand in a dataframe including 
+    logP (partition coefficient), hydrogen bond donors, hydrogen bond acceptors,
+    molar refractivity (Ghose filter), number of rotatable bonds (Veber's rule) and polar surface
+    area (Veber's rule).
     
     Parameters
     ----------
@@ -288,9 +291,6 @@ def chemical_physical_properties(df):
     -------
     None
     """
-    # calculate logP (partition coefficient), hydrogen bond donors, hydrogen bond acceptors,
-    # molar refractivity (Ghose filter), number of rotatable bonds (veber's rule) and polar surface
-    # area (veber's rule) of ligands
     log_P = []
     H_donors = []
     H_acceptors = []
@@ -313,7 +313,13 @@ def chemical_physical_properties(df):
             psa = Descriptors.TPSA(mol)
             tpsas.append(psa)
         else:
-            pass
+            print(f"Could not calculate properties for molecule {row['filename_hydrogens']}")
+            log_P.append(np.nan)
+            H_donors.append(np.nan)
+            H_acceptors.append(np.nan)
+            mol_mr.append(np.nan)
+            mol_rotatable.append(np.nan)
+            tpsas.append(np.nan)
     df.insert(3, "log_P", log_P)
     df.insert(4, "H_donors", H_donors)
     df.insert(5, "H_acceptors", H_acceptors)
@@ -347,13 +353,13 @@ def get_ligand_properties(lig_df):
     updated_df = lig_df.copy()
     for index, row in updated_df.iterrows():
         try:
-            mol = Chem.MolFromMol2File(row['filename_hydrogens'],sanitize=False)
-            if mol is not None:
-                mol_H = Chem.AddHs(mol)
-                mol_format.append(mol_H)
-                mol_atoms = mol_H.GetNumAtoms()
+            mol = Chem.MolFromMol2File(row['filename_hydrogens'],removeHs=False)
+            print(f"Read mol2 file for {row['filename_hydrogens']} successfully.") # TEST TEST
+            if (mol is not None) and (mol is not np.nan):
+                mol_format.append(mol)
+                mol_atoms = mol.GetNumAtoms()
                 atom_total.append(mol_atoms)
-                mol_atoms_heavy = mol_H.GetNumHeavyAtoms()
+                mol_atoms_heavy = mol.GetNumHeavyAtoms()
                 atom_total_heavy.append(mol_atoms_heavy)
             else:
                 #currently only works for molecules containing only atoms with single letter names, need to fix
@@ -364,6 +370,7 @@ def get_ligand_properties(lig_df):
                 atom_total.append(len(string_alpha))
                 atom_total_heavy.append(len(string_alpha) - len(string_H))
         except OSError:
+            print(f"Could not read mol2 file for {row['filename_hydrogens']}, attempting to create from SMILES string...") # TEST TEST
             mol = Chem.MolFromSmiles(row['smiles'])
             if mol is not None:
                 mol_H = Chem.AddHs(mol)

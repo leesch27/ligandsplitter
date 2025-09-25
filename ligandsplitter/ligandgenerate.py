@@ -66,18 +66,19 @@ def create_search_for_expo():
     style = {'description_width': 'initial'}
 
     attr1 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Name?:', style = style)
-    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Free Ligands?', style = style)
-    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Type', style = style)
-    attr4 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical ID?', style = style)
+    attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Name Synonym?', style = style)
+    attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical ID?', style = style)
+    attr4 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Type', style = style)
     attr5 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Brand Name?', style = style)
     attr6 = Dropdown(options = ["No", "Yes"], description = 'Search by Formula Similarity?', style = style)
     attr7 = Dropdown(options = ["No", "Yes"], description = 'Search by Structure Similarity?', style = style)
-    attr1_val = Text(value = '', placeholder='Type Chemical Name Here', disabled=False)
-    attr2_val = Text(value = '', placeholder='Type Free Ligand ID Here', disabled=False)
-    attr3_val = Dropdown(options = chem_types, description = 'Select Chemical Type', style = style)
-    attr4_val = Text(value = '', placeholder='Type Chemical ID Here', disabled=False)
-    attr5_val = Text(value = '', placeholder='Type Chemical Brand Name Here', disabled=False)
-    attr6_val = Text(value = '', placeholder='Type Ligand Formula Here', disabled=False)
+
+    attr1_val = Text(value = '', placeholder='Type Chemical Name Here (e.g. alanine)', disabled=False)
+    attr2_val = Text(value = '', placeholder='Type Synonym Here (e.g. acetylsalicylic acid)', disabled=False)
+    attr3_val = Text(value = '', placeholder='Type RCSB Chemical ID Here (e.g. AIN)', disabled=False)
+    attr4_val = Dropdown(options = chem_types, description = 'Select Chemical Type', style = style)
+    attr5_val = Text(value = '', placeholder='Type DrugBank Brand Name Here (e.g. Aspirin)', disabled=False)
+    attr6_val = Text(value = '', placeholder='Type Ligand Formula Here (e.g. C9H8O4)', disabled=False)
     attr7_val = Text(value = '', placeholder='Type Ligand SMILES Here', disabled=False)
 
     attr_bool = {"attr1": attr1, "attr2": attr2, "attr3": attr3, "attr4": attr4, "attr5": attr5, "attr6": attr6, "attr7": attr7}
@@ -85,6 +86,7 @@ def create_search_for_expo():
 
     form_items1 = [attr1, attr2, attr3, attr4, attr5, attr6, attr7]
     form_items2 = [attr1_val, attr2_val, attr3_val, attr4_val, attr5_val, attr6_val, attr7_val]
+
     return attr_bool, attr_val, form_items1, form_items2
 
 
@@ -218,9 +220,9 @@ def create_ligands_from_expo(attr_bool, attr_val):
     bools = list(bool_vals.values())
     values = list(val_vals.values())
     q1 = AttributeQuery(attribute = "chem_comp.name", operator = "exact_match", value = values[0])
-    q2 = AttributeQuery(attribute = "rcsb_nonpolymer_instance_annotation.comp_id", operator = "exact_match", value = values[1])
-    q3 = AttributeQuery(attribute = "chem_comp.type", operator = "exact_match", value = values[2])
-    q4 = AttributeQuery(attribute = "rcsb_id", operator = "exact_match", value = values[3])
+    q2 = AttributeQuery(attribute = "rcsb_chem_comp_synonyms.name", operator = "contains_phrase", value = values[1], service = "text_chem")
+    q3 = AttributeQuery(attribute = "rcsb_id", operator = "exact_match", value = values[2], service = "text_chem")
+    q4 = AttributeQuery(attribute = "chem_comp.type", operator = "exact_match", value = values[3])
     q5 = AttributeQuery(attribute = "drugbank_info.brand_names", operator = "contains_phrase", value = values[4])
     q6 = ChemSimilarityQuery(query_type = "formula", value = values[5])
     q7 = ChemSimilarityQuery(query_type = "descriptor", descriptor_type = "SMILES", match_type="fingerprint-similarity", value = values[6])

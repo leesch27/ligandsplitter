@@ -81,18 +81,32 @@ def retrieve_pdb_file(pdb_id, format = ""):
                     "OS4", "PB", "PD", "PR", "PT", "PT4", "4PU", "RB", "RH3", "RHF", "RU", "SB", "SM", "SR", "TB", "TH", 
                     "4TI", "TL", "V", "W", "Y1", "YB", "YB2", "YT3", "ZCM", "ZN", "ZR", "ZTM"]
     if format == "pdb":
+        covalent_ligs = []
         pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
+        with open(pdb_filename,"r") as outfile:
+            data = outfile.readlines()
+            for line in data:
+                # check to see if any ligands are covalently bound to protein
+                # if present, record the id, chain number, and residue number
+                if 'LINK' in line:
+                    split_line = line.split()
+                    if split_line[6] not in covalent_ligs:
+                        covalent_ligs.append(split_line[6])
         u = mda.Universe(pdb_filename)
-        protein = u.select_atoms("protein")
+        selection = "protein"
+        selection_ligand = "not protein and not resname HOH"
+        for lig in covalent_ligs:
+            selection = selection + " or resname " + lig
+            selection_ligand = selection_ligand + " and not resname " + lig
+        protein = u.select_atoms(selection)
         protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
     
         # isolate ligands and remove water molecules from PDB file
-        ligand = u.select_atoms(f"not protein and not resname HOH")
+        ligand = u.select_atoms(selection_ligand)
         try:
             ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
         except IndexError:
             print(f"Macromolecule from PDB ID {pdb_id} has no ligands present. PDB file of macromolecule has been saved to data/PDB_files/{short_filename}_protein.pdb")
-
         try:
             with open(f"data/PDB_files/{pdb_id}_clean_ligand.pdb", 'w+') as datafile: 
                 with open(f"data/PDB_files/{pdb_id}_ligand.pdb","r") as outfile:
@@ -100,9 +114,9 @@ def retrieve_pdb_file(pdb_id, format = ""):
                 for line in data:
                     if 'HETATM' in line:
                         split_line = line.split()
-                        line_1_join = split_line[1]
-                        line_2_join = split_line[2]
-                        line_3_join = split_line[3]
+                        line_1_join = split_line[1] # residue number
+                        line_2_join = split_line[2] # atom name
+                        line_3_join = split_line[3] # residue name
                         if 'HETATM' not in split_line[0]:
                             datafile.write(line)
                         # only write hetatm lines if they are not atomic ions -- if the alphabetical characters in the
@@ -163,13 +177,28 @@ def retrieve_pdb_file(pdb_id, format = ""):
         remainder = pdb_id.split(".")[0]
         short_filename = remainder.split("/")[-1]
         if ("pdb" in format_subset) or ("ent" in format_subset):
+            covalent_ligs = []
+            with open(pdb_id, "r") as outfile:
+                data = outfile.readlines()
+                for line in data:
+                    # check to see if any ligands are covalently bound to protein
+                    # if present, record the id, chain number, and residue number
+                    if 'LINK' in line:
+                        split_line = line.split()
+                        if split_line[6] not in covalent_ligs:
+                            covalent_ligs.append(split_line[6])
             u = mda.Universe(pdb_id)
-            protein = u.select_atoms("protein")
+            selection = "protein"
+            selection_ligand = "not protein and not resname HOH"
+            for lig in covalent_ligs:
+                selection = selection + " or resname " + lig
+                selection_ligand = selection_ligand + " and not resname " + lig
+            protein = u.select_atoms(selection)
             pdb_id = short_filename
             protein.write(f"data/PDB_files/{pdb_id}_protein.pdb")
     
             # isolate ligands and remove water molecules from PDB file
-            ligand = u.select_atoms(f"not protein and not resname HOH")
+            ligand = u.select_atoms(selection_ligand)
             try:
                 ligand.write(f"data/PDB_files/{pdb_id}_ligand.pdb")
             except IndexError:
