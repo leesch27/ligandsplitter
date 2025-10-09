@@ -149,7 +149,7 @@ class LigandVariables:
             self.pyrimidine : 'pyrimidine'
         }
 
-def create_folders():
+def create_folders(dir = ""):
     """
     Create data path/dir and sub folders for each file type, return error if exists.
 
@@ -164,7 +164,10 @@ def create_folders():
     """
 
     global current_dir
-    current_dir = os.getcwd()
+    if dir != "":
+        current_dir = dir
+    else:
+        current_dir = os.getcwd()
     dataPath = os.path.join(current_dir, "data")
     try:
         os.mkdir(dataPath)

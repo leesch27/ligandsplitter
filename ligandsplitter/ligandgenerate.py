@@ -68,7 +68,7 @@ def create_search_for_expo():
     attr1 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Name?:', style = style)
     attr2 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Name Synonym?', style = style)
     attr3 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical ID?', style = style)
-    attr4 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Type', style = style)
+    attr4 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Type?', style = style)
     attr5 = Dropdown(options = ["No", "Yes"], description = 'Search by Chemical Brand Name?', style = style)
     attr6 = Dropdown(options = ["No", "Yes"], description = 'Search by Formula Similarity?', style = style)
     attr7 = Dropdown(options = ["No", "Yes"], description = 'Search by Structure Similarity?', style = style)

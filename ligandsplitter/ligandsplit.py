@@ -627,6 +627,11 @@ def write_mol2(ligs_unique, file_info):
         counter_bond = 1
         bond1 = unique_lig.lines_bond[0] # lower limit/starting value for bond numbers
         bond2 = unique_lig.lines_bond[1] # upper limit for bond numbers
+        max_bond_index = file_info.lines_bonds[bond2].split()
+        # determine if atom indexes in bond lines need to be renumbered for ligand
+        renumber_bond_atoms = False
+        if ((max(int(max_bond_index[1]), int(max_bond_index[2])) > unique_lig.num_atoms) and unique_ind > 0):
+            renumber_bond_atoms = True
         while bond1 <= bond2:
             # get line in original combined mol2 file corresponding to index of bond1
             temp_bond = re.split(r"(\s+)", file_info.lines_bonds[bond1])
@@ -642,7 +647,7 @@ def write_mol2(ligs_unique, file_info):
                 else:
                     temp_bond[1] = temp_bond[1][:(len_space + 1 - len_diff)]
             # confirm that numbers for atoms in bond are consistant with atom numbering system in atom info
-            if (unique_ind > 0 and (max(int(temp_bond[4]), int(temp_bond[6])) > unique_lig.num_atoms)):
+            if (renumber_bond_atoms):
                 temp_bond[4] = str(int(temp_bond[4]) - previous_atoms)
                 temp_bond[6] = str(int(temp_bond[6]) - previous_atoms)
             # if the length of the number corresponding to the first atom in the bond has changed, adjust spacing
