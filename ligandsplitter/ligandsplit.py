@@ -80,6 +80,7 @@ def retrieve_pdb_file(pdb_id, format = ""):
                     "IR3", "IR", "K", "LA", "LI", "LU", "MG", "MN", "MN3", "4MO", "6MO", "NA", "ND", "NI", "3NI", "OS", 
                     "OS4", "PB", "PD", "PR", "PT", "PT4", "4PU", "RB", "RH3", "RHF", "RU", "SB", "SM", "SR", "TB", "TH", 
                     "4TI", "TL", "V", "W", "Y1", "YB", "YB2", "YT3", "ZCM", "ZN", "ZR", "ZTM"]
+    res_list = ["ALA", "CYS", 'ASP', 'GLU','PHE','GLY', 'HIS', 'ILE', 'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR']
     if format == "pdb":
         covalent_ligs = []
         pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="pdb")
@@ -90,8 +91,10 @@ def retrieve_pdb_file(pdb_id, format = ""):
                 # if present, record the id, chain number, and residue number
                 if 'LINK' in line:
                     split_line = line.split()
-                    if split_line[6] not in covalent_ligs:
+                    if (split_line[2] in res_list) and (split_line[6] not in covalent_ligs) and (split_line[6] not in res_list) and (split_line[6] != "HOH"):
                         covalent_ligs.append(split_line[6])
+                    elif (split_line[6] in res_list) and (split_line[2] not in covalent_ligs) and (split_line[2] not in res_list) and (split_line[2] != "HOH"):
+                        covalent_ligs.append(split_line[2])
         u = mda.Universe(pdb_filename)
         selection = "protein"
         selection_ligand = "not protein and not resname HOH"
@@ -185,8 +188,10 @@ def retrieve_pdb_file(pdb_id, format = ""):
                     # if present, record the id, chain number, and residue number
                     if 'LINK' in line:
                         split_line = line.split()
-                        if split_line[6] not in covalent_ligs:
+                        if (split_line[2] in res_list) and (split_line[6] not in covalent_ligs) and (split_line[6] not in res_list) and (split_line[6] != "HOH"):
                             covalent_ligs.append(split_line[6])
+                        elif (split_line[6] in res_list) and (split_line[2] not in covalent_ligs) and (split_line[2] not in res_list) and (split_line[2] != "HOH"):
+                            covalent_ligs.append(split_line[2])
             u = mda.Universe(pdb_id)
             selection = "protein"
             selection_ligand = "not protein and not resname HOH"
