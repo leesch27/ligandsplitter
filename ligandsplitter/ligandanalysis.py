@@ -10,6 +10,7 @@ from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.compose import ColumnTransformer, make_column_transformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+import xgboost as xgb
 from .basefunctions import LigandVariables
 
 vars = LigandVariables()
@@ -68,15 +69,20 @@ def rf_classifier(data, method = ""):
     """
 
     # get feature and target variables
+    features = data[data["orally_bioactive"].notna()]
+    features_na = data[data["orally_bioactive"].isna()]
     if method == "LRO5":
-        features = data.drop(columns = ["filename_hydrogens", "smiles", "mol_refractivity", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+        features = features.drop(columns = ["filename_hydrogens", "smiles", "mol_refractivity", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+        features_na = features_na.drop(columns = ["filename_hydrogens", "smiles", "mol_refractivity", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
     elif method == "Ghose":
-        features = data.drop(columns = ["filename_hydrogens", "smiles", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+        features = features.drop(columns = ["filename_hydrogens", "smiles", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+        features_na = features_na.drop(columns = ["filename_hydrogens", "smiles", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
     elif method == "Veber":
-        features = data.drop(columns = ["filename_hydrogens", "smiles", "orally_bioactive", "mol"])
+        features = features.drop(columns = ["filename_hydrogens", "smiles", "orally_bioactive", "mol"])
+        features_na = features_na.drop(columns = ["filename_hydrogens", "smiles", "orally_bioactive", "mol"])
     else:
         print("Please provide a valid method: LRO5, Ghose, or Veber.")
-    target = data["orally_bioactive"]
+    target = data[data["orally_bioactive"].notna()]["orally_bioactive"]
 
     # define training and testing data
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size = 0.2)
@@ -105,13 +111,17 @@ def rf_classifier(data, method = ""):
     print("Fitting optimized model...")
     rf_random_search.fit(X_train, y_train)
     optimized_rf_c = pd.DataFrame(rf_random_search.cv_results_)[["mean_test_score","param_max_depth","param_max_features", "param_min_samples_split", "param_min_samples_leaf", "mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
-    max_depth_val = float(optimized_rf_c.iloc[1,1])
-    max_features_val = float(optimized_rf_c.iloc[1,2])
-    min_sample_split_val = float(optimized_rf_c.iloc[1,3])
-    min_samples_leaf_val = float(optimized_rf_c.iloc[1,4])
+    max_depth_val = int(optimized_rf_c.iloc[1,1])
+    max_features_val = int(optimized_rf_c.iloc[1,2])
+    min_sample_split_val = int(optimized_rf_c.iloc[1,3])
+    min_samples_leaf_val = int(optimized_rf_c.iloc[1,4])
     rf_optimal = RandomForestClassifier(max_depth = max_depth_val, max_features = max_features_val, min_samples_split = min_sample_split_val, min_samples_leaf = min_samples_leaf_val)
     rf_optimal.fit(X_train, y_train)
-    rf_optimal.score(X_test, y_test)
+    score = rf_optimal.score(X_test, y_test)
+    print(f"Optimized model test score: {score}")
+    predictions = rf_optimal.predict(features_na)
+    for index, row in features_na.iterrows():
+        print(f"Predicted orally bioactive value for {row['filename_hydrogens']}: {predictions[index]}")
 
     # obtain feature importance
     feature_names = list(X_train.columns)
@@ -136,49 +146,94 @@ def rf_regressor(data):
         Dataframe containing feature importances of the model.
     """
 
-    features = data.drop(columns = ["Score"])
+    features = data.drop(columns = ["Score", "Ligand", "Frame"])
     target = data["Score"]
+    shape = features.shape[0]
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size = 0.2)
     
     # initial training
-    rf_r = RandomForestClassifier()
+    xgb_model = xgb.XGBRegressor()
+    xgb_model.fit(X_train, y_train)
+    rf_r = RandomForestRegressor()
     rf_r.fit(X_train, y_train)
+
     scores_rf_r = cross_validate(rf_r, X_train, y_train, return_train_score=True)
-    print(f"Initial cross-validation fit time: {scores_rf_r['fit_time']}")
-    print(f"Initial cross-validation score time: {scores_rf_r['score_time']}")
-    print(f"Initial cross-validation training scores: {scores_rf_r['train_score']}")
-    print(f"Initial cross-validation testing scores: {scores_rf_r['test_score']}")
+    scores_xgb_r = cross_validate(xgb_model, X_train, y_train, return_train_score=True)
+    print(f"Initial Random Forest cross-validation fit time: {scores_rf_r['fit_time']}")
+    print(f"Initial Random Forest cross-validation score time: {scores_rf_r['score_time']}")
+    print(f"Initial Random Forest cross-validation training scores: {scores_rf_r['train_score']}")
+    print(f"Initial Random Forest cross-validation testing scores: {scores_rf_r['test_score']}")
+
+    print(f"Initial XGBoost cross-validation fit time: {scores_xgb_r['fit_time']}")
+    print(f"Initial XGBoost cross-validation score time: {scores_xgb_r['score_time']}")
+    print(f"Initial XGBoost cross-validation training scores: {scores_xgb_r['train_score']}")
+    print(f"Initial XGBoost cross-validation testing scores: {scores_xgb_r['test_score']}")
 
     # hyperparameter optimization
     print("Starting hyperparameter optimization...")
-    rf_param_grid = {
-        "max_depth": [1, 5, 10, 15, 20],
-        "max_features": [1, 5, 10, 15, 20],
-        "min_samples_split": [10, 20, 30, 40, 50],
-        "min_samples_leaf": [5, 10, 15, 20]
-    }
-    rf_random_search = RandomizedSearchCV(RandomForestRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5, random_state=123)
+    if shape > 100:
+        rf_param_grid = {
+            "max_depth": [1, 5, 10, 15, 20],
+            "max_features": [1, 5, 10, 15, 20],
+            "min_samples_split": [10, 20, 30, 40, 50],
+            "min_samples_leaf": [5, 10, 15, 20]
+        }
+    else:
+        # if dataset is smaller than 50 samples, adjust hyperparameter ranges
+        calc_min_sample_other_val = int(shape * 0.5)
+
+        float_step = calc_min_sample_other_val/5
+        depth_val_step = int(float_step) if float_step > 1 else 1
+        depth_vals = [x for x in range(1, calc_min_sample_other_val + 1, depth_val_step)]
+        
+        rf_param_grid = {
+            "max_depth": depth_vals,
+            "max_features": [0.3, 0.5, 0.7, 0.9],
+            "min_samples_split": [0.3, 0.5, 0.7, 0.9],
+            "min_samples_leaf": [0.3, 0.5, 0.7, 0.9]
+        }
+    rf_random_search = RandomizedSearchCV(RandomForestRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5)
+    xgb_random_search = RandomizedSearchCV(xgb.XGBRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5)
     print("Done!")
 
     # create and deploy optimized model
-    print("Fitting optimized model...")
+    print("Fitting optimized models...")
     rf_random_search.fit(X_train, y_train)
+    xgb_random_search.fit(X_train, y_train)
     optimized_rf_r = pd.DataFrame(rf_random_search.cv_results_)[["mean_test_score","param_max_depth","param_max_features", "param_min_samples_split", "param_min_samples_leaf", "mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
-    max_depth_val = float(optimized_rf_r.iloc[1,1])
-    max_features_val = float(optimized_rf_r.iloc[1,2])
-    min_sample_split_val = float(optimized_rf_r.iloc[1,3])
-    min_samples_leaf_val = float(optimized_rf_r.iloc[1,4])
-    rf_optimal = RandomForestClassifier(max_depth = max_depth_val, max_features = max_features_val, min_samples_split = min_sample_split_val, min_samples_leaf = min_samples_leaf_val)
+    max_depth_val_rf = int(optimized_rf_r.iloc[1,1])
+    max_features_val_rf = int(optimized_rf_r.iloc[1,2])
+    min_sample_split_val_rf = int(optimized_rf_r.iloc[1,3])
+    min_samples_leaf_val_rf = int(optimized_rf_r.iloc[1,4])
+
+    optimized_xgb_r = pd.DataFrame(xgb_random_search.cv_results_)[["mean_test_score","param_max_depth","param_max_features", "param_min_samples_split", "param_min_samples_leaf", "mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
+    max_depth_val_xgb = int(optimized_xgb_r.iloc[1,1])
+    max_features_val_xgb = int(optimized_xgb_r.iloc[1,2])
+    min_sample_split_val_xgb = int(optimized_xgb_r.iloc[1,3])
+    min_samples_leaf_val_xgb = int(optimized_xgb_r.iloc[1,4])
+
+    rf_optimal = RandomForestRegressor(max_depth = max_depth_val_rf, max_features = max_features_val_rf, min_samples_split = min_sample_split_val_rf, min_samples_leaf = min_samples_leaf_val_rf)
     rf_optimal.fit(X_train, y_train)
-    rf_optimal.score(X_test, y_test)
+    score_rf = rf_optimal.score(X_test, y_test)
+    print(f"Optimized Random Forest model test score: {score_rf}")
+
+    xgb_optimal = RandomForestRegressor(max_depth = max_depth_val_xgb, max_features = max_features_val_xgb, min_samples_split = min_sample_split_val_xgb, min_samples_leaf = min_samples_leaf_val_xgb)
+    xgb_optimal.fit(X_train, y_train)
+    score_xgb = xgb_optimal.score(X_test, y_test)
+    print(f"Optimized Random Forest model test score: {score_xgb}")
 
     # obtain feature importance
     feature_names = list(X_train.columns)
-    data = {
+    data_rf = {
         "Importance": rf_optimal.feature_importances_,
     }
-    imps = pd.DataFrame(data=data, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
-    return imps
+    imps_rf = pd.DataFrame(data=data_rf, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
+    
+    data_xgb = {
+        "Importance": xgb_optimal.feature_importances_,
+    }
+    imps_xgb = pd.DataFrame(data=data_xgb, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
+    return imps_rf, imps_xgb
 
 def number_of_atoms(atom_list, df):
     """
@@ -263,19 +318,19 @@ def atom_weights(df):
     }
     ligand_weights = []
     for index, row in df.iterrows():
-        ligand_atom_nums = sum(row[5:])
+        ligand_atom_nums = sum(row[6:])
         weight_da = 0
-        if row['num_of_heavy_atoms'] == ligand_atom_nums:
-            for num, column in enumerate(row[5:]):
-                column_title = list(df)[num + 5]
+        if int(row['num_of_heavy_atoms']) == ligand_atom_nums:
+            for num, column in enumerate(row[6:]):
+                column_title = list(df)[num + 6]
                 atom_name = re.split("_", column_title)
                 atom_type_weight = atom_weights_dict[atom_name[2]]
                 weight_da = weight_da + (atom_type_weight *  column)
-        weight_da = weight_da + ((row.iloc[3] - row.iloc[4]) * 1.007)
+        weight_da = weight_da + ((row.loc['num_of_atoms'] - row.loc['num_of_heavy_atoms']) * 1.007)
         ligand_weights.append(weight_da)
     df.insert(2, "molecular_weight", ligand_weights)
 
-def chemical_physical_properties(df):
+def chemical_physical_properties(df, quiet = True):
     """
     Calculate various properties for each ligand in a dataframe including 
     logP (partition coefficient), hydrogen bond donors, hydrogen bond acceptors,
@@ -298,7 +353,7 @@ def chemical_physical_properties(df):
     mol_rotatable = []
     tpsas = []
     for index, row in df.iterrows():
-        mol = row.iloc[3]
+        mol = row.loc["mol"]
         if type(mol) != float:
             log = Crippen.MolLogP(mol)
             log_P.append(log)
@@ -313,7 +368,8 @@ def chemical_physical_properties(df):
             psa = Descriptors.TPSA(mol)
             tpsas.append(psa)
         else:
-            print(f"Could not calculate properties for molecule {row['filename_hydrogens']}")
+            if quiet == False:
+                print(f"Could not calculate properties for molecule {row['filename_hydrogens']}")
             log_P.append(np.nan)
             H_donors.append(np.nan)
             H_acceptors.append(np.nan)
@@ -327,7 +383,7 @@ def chemical_physical_properties(df):
     df.insert(7, "rotatable_bonds", mol_rotatable)
     df.insert(8, "polar_surface_area", tpsas)
 
-def get_ligand_properties(lig_df):
+def get_ligand_properties(lig_df, quiet = True):
     """
     Determine the importance of ligand features in determining binding affinity.
     
@@ -354,7 +410,8 @@ def get_ligand_properties(lig_df):
     for index, row in updated_df.iterrows():
         try:
             mol = Chem.MolFromMol2File(row['filename_hydrogens'],removeHs=False)
-            print(f"Read mol2 file for {row['filename_hydrogens']} successfully.") # TEST TEST
+            if quiet == False:
+                print(f"Read mol2 file for {row['filename_hydrogens']} successfully.") # TEST TEST
             if (mol is not None) and (mol is not np.nan):
                 mol_format.append(mol)
                 mol_atoms = mol.GetNumAtoms()
@@ -370,7 +427,8 @@ def get_ligand_properties(lig_df):
                 atom_total.append(len(string_alpha))
                 atom_total_heavy.append(len(string_alpha) - len(string_H))
         except OSError:
-            print(f"Could not read mol2 file for {row['filename_hydrogens']}, attempting to create from SMILES string...") # TEST TEST
+            if quiet == False:
+                print(f"Could not read mol2 file for {row['filename_hydrogens']}, attempting to create from SMILES string...") # TEST TEST
             mol = Chem.MolFromSmiles(row['smiles'])
             if mol is not None:
                 mol_H = Chem.AddHs(mol)
