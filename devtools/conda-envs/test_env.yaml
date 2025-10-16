@@ -16,6 +16,7 @@ dependencies:
   - biopython
   - ipywidgets
   - scikit-learn
+  - py-xgboost
 
     # Testing
   - pytest
