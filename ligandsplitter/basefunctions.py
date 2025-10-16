@@ -173,9 +173,7 @@ def create_folders(dir = ""):
         os.mkdir(dataPath)
         print("Created directory:", dataPath)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", dataPath)
-        else:
+        if error.errno != 17:
             print(error)
 
     # create pdb file path/dir, return error if exists
@@ -184,9 +182,7 @@ def create_folders(dir = ""):
         os.mkdir(pdbPath)
         print("Created directory:", pdbPath)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", pdbPath)
-        else:
+        if error.errno != 17:
             print(error)
 
     # create mol2 file path/dir, return error if exists
@@ -195,9 +191,7 @@ def create_folders(dir = ""):
         os.mkdir(mol2Path)
         print("Created directory:", mol2Path)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", mol2Path)
-        else:
+        if error.errno != 17:
             print(error)
 
     # create pdbqt file path/dir, return error if exists
@@ -206,9 +200,7 @@ def create_folders(dir = ""):
         os.mkdir(pdbqtPath)
         print("Created directory:", pdbqtPath)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", pdbqtPath)
-        else:
+        if error.errno != 17:
             print(error)
 
     # create test file path/dir, return error if exists
@@ -217,9 +209,7 @@ def create_folders(dir = ""):
         os.mkdir(testPath)
         print("Created directory:", testPath)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", testPath)
-        else:
+        if error.errno != 17:
             print(error)
     
     # create vina_out file path/dir, return error if exists
@@ -228,9 +218,7 @@ def create_folders(dir = ""):
         os.mkdir(vina_out)
         print("Created directory:", vina_out)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", vina_out)
-        else:
+        if error.errno != 17:
             print(error)
 
     # create vina_out_2 file path/dir, return error if exists
@@ -239,9 +227,7 @@ def create_folders(dir = ""):
         os.mkdir(vina_out_2)
         print("Created directory:", vina_out_2)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", vina_out_2)
-        else:
+        if error.errno != 17:
             print(error)
 
     # create smina_out file path/dir, return error if exists
@@ -250,9 +236,7 @@ def create_folders(dir = ""):
         os.mkdir(smina_out)
         print("Created directory:", smina_out)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", smina_out)
-        else:
+        if error.errno != 17:
             print(error)
 
     # create smina_out_2 file path/dir, return error if exists
@@ -261,9 +245,7 @@ def create_folders(dir = ""):
         os.mkdir(smina_out_2)
         print("Created directory:", smina_out_2)
     except OSError as error:
-        if error.errno == 17:
-            print("Directory exists:", smina_out_2)
-        else:
+        if error.errno != 17:
             print(error)
     
     return current_dir
