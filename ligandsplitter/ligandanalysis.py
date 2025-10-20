@@ -51,7 +51,7 @@ def group_idxes_from_mol(lig, renumber = False):
                         match_indexes[subind_string] = [vars.functional_groups_dict[j]]
     return match_indexes
 
-def rf_classifier(data, method = ""):
+def oral_bioactive_classifier(data, method = ""):
     """
     Determine the importance of ligand features in whether they are orally bioactive or not using a Random Forest Classifier.
     
@@ -69,6 +69,7 @@ def rf_classifier(data, method = ""):
     """
 
     # get feature and target variables
+    names = data[data["orally_bioactive"].isna()]["filename_hydrogens"].tolist()
     features = data[data["orally_bioactive"].notna()]
     features_na = data[data["orally_bioactive"].isna()]
     if method == "LRO5":
@@ -121,7 +122,7 @@ def rf_classifier(data, method = ""):
     print(f"Optimized model test score: {score}")
     predictions = rf_optimal.predict(features_na)
     for index, row in features_na.iterrows():
-        print(f"Predicted orally bioactive value for {row['filename_hydrogens']}: {predictions[index]}")
+        print(f"Predicted orally bioactive value for {names[index]}: {predictions[index]}")
 
     # obtain feature importance
     feature_names = list(X_train.columns)
@@ -131,7 +132,7 @@ def rf_classifier(data, method = ""):
     imps = pd.DataFrame(data=data, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
     return imps
 
-def rf_regressor(data):
+def interaction_regressor(data):
     """
     Determine the importance of ligand features in determining binding affinity.
     
@@ -150,6 +151,10 @@ def rf_regressor(data):
     target = data["Score"]
     shape = features.shape[0]
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size = 0.2)
+    if X_train.shape[0] < 10:
+        print("Docking data too small to perform machine learning analysis on.")
+        imps_rf, imps_xgb = "N/A", "N/A"
+        return imps_rf, imps_xgb
     
     # initial training
     xgb_model = xgb.XGBRegressor()
@@ -178,6 +183,9 @@ def rf_regressor(data):
             "min_samples_split": [10, 20, 30, 40, 50],
             "min_samples_leaf": [5, 10, 15, 20]
         }
+        xgb_param_grid = {
+            "max_depth": [1, 5, 10, 15, 20]
+        }
     else:
         # if dataset is smaller than 50 samples, adjust hyperparameter ranges
         calc_min_sample_other_val = int(shape * 0.5)
@@ -192,8 +200,11 @@ def rf_regressor(data):
             "min_samples_split": [0.3, 0.5, 0.7, 0.9],
             "min_samples_leaf": [0.3, 0.5, 0.7, 0.9]
         }
+        xgb_param_grid = {
+            "max_depth": depth_vals
+        }
     rf_random_search = RandomizedSearchCV(RandomForestRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5)
-    xgb_random_search = RandomizedSearchCV(xgb.XGBRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5)
+    xgb_random_search = RandomizedSearchCV(xgb.XGBRegressor(), param_distributions=xgb_param_grid, n_jobs=-1, n_iter=10, cv=5)
     print("Done!")
 
     # create and deploy optimized model
@@ -201,26 +212,24 @@ def rf_regressor(data):
     rf_random_search.fit(X_train, y_train)
     xgb_random_search.fit(X_train, y_train)
     optimized_rf_r = pd.DataFrame(rf_random_search.cv_results_)[["mean_test_score","param_max_depth","param_max_features", "param_min_samples_split", "param_min_samples_leaf", "mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
-    max_depth_val_rf = int(optimized_rf_r.iloc[1,1])
-    max_features_val_rf = int(optimized_rf_r.iloc[1,2])
-    min_sample_split_val_rf = int(optimized_rf_r.iloc[1,3])
-    min_samples_leaf_val_rf = int(optimized_rf_r.iloc[1,4])
+    max_depth_val_rf = int(optimized_rf_r.iloc[1,1]) if optimized_rf_r.iloc[1,1] >= 1 else float(optimized_rf_r.iloc[1,1])
+    max_features_val_rf = int(optimized_rf_r.iloc[1,2]) if optimized_rf_r.iloc[1,2] >= 1 else float(optimized_rf_r.iloc[1,2])
+    min_sample_split_val_rf = int(optimized_rf_r.iloc[1,3]) if optimized_rf_r.iloc[1,3] > 1 else float(optimized_rf_r.iloc[1,3])
+    min_samples_leaf_val_rf = int(optimized_rf_r.iloc[1,4]) if optimized_rf_r.iloc[1,4] >= 1 else float(optimized_rf_r.iloc[1,4])
 
-    optimized_xgb_r = pd.DataFrame(xgb_random_search.cv_results_)[["mean_test_score","param_max_depth","param_max_features", "param_min_samples_split", "param_min_samples_leaf", "mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
-    max_depth_val_xgb = int(optimized_xgb_r.iloc[1,1])
-    max_features_val_xgb = int(optimized_xgb_r.iloc[1,2])
-    min_sample_split_val_xgb = int(optimized_xgb_r.iloc[1,3])
-    min_samples_leaf_val_xgb = int(optimized_xgb_r.iloc[1,4])
-
+    optimized_xgb_r = pd.DataFrame(xgb_random_search.cv_results_)[["mean_test_score","param_max_depth","mean_fit_time","rank_test_score",]].set_index("rank_test_score").sort_index().T
+    max_depth_val_xgb = int(optimized_xgb_r.iloc[1,1]) if optimized_xgb_r.iloc[1,1] >= 1 else float(optimized_xgb_r.iloc[1,1])
+    
     rf_optimal = RandomForestRegressor(max_depth = max_depth_val_rf, max_features = max_features_val_rf, min_samples_split = min_sample_split_val_rf, min_samples_leaf = min_samples_leaf_val_rf)
     rf_optimal.fit(X_train, y_train)
     score_rf = rf_optimal.score(X_test, y_test)
     print(f"Optimized Random Forest model test score: {score_rf}")
 
-    xgb_optimal = RandomForestRegressor(max_depth = max_depth_val_xgb, max_features = max_features_val_xgb, min_samples_split = min_sample_split_val_xgb, min_samples_leaf = min_samples_leaf_val_xgb)
+    xgb_optimal = xgb.XGBRegressor(max_depth = max_depth_val_xgb)
+
     xgb_optimal.fit(X_train, y_train)
     score_xgb = xgb_optimal.score(X_test, y_test)
-    print(f"Optimized Random Forest model test score: {score_xgb}")
+    print(f"Optimized XGBoost model test score: {score_xgb}")
 
     # obtain feature importance
     feature_names = list(X_train.columns)

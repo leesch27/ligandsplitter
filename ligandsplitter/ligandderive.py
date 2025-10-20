@@ -35,7 +35,15 @@ def get_func_groups(ligs):
     deriv_created = {}
     for i in ligs:
         mol_groups = []
-        mol = Chem.MolFromMol2File(f"data/MOL2_files/{i}_H.mol2", sanitize = False)
+        try:
+            mol = Chem.MolFromMol2File(f"data/MOL2_files/{i}_H.mol2", sanitize = False)
+        except:
+            mol_proto = [m for m in pybel.readfile(filename= f"data/MOL2_files/{i}.mol2",format='mol2')][0]
+            mol_proto.addh()
+            out = pybel.Outputfile(filename= "data/MOL2_files/" + str(i) + "_H.mol2",format='mol2',overwrite=True)
+            out.write(mol_proto)
+            out.close()
+            mol = Chem.MolFromMol2File(f"data/MOL2_files/{i}_H.mol2", sanitize = False)
         mol_neworder = tuple(zip(*sorted([(j, i) for i, j in enumerate(Chem.CanonicalRankAtoms(mol))])))[1]
         mol_renum = Chem.RenumberAtoms(mol, mol_neworder)
         for j in vars.functional_groups:
@@ -75,7 +83,7 @@ def derive(ligand, group):
     derivative_smile = []
     deriv_type = {}
 
-    mol = Chem.MolFromMol2File(f"data/MOL2_files/{ligand}_H.mol2",sanitize=False)
+    mol = Chem.MolFromMol2File(f"data/MOL2_files/{ligand}_H.mol2", sanitize = False)
     old_substr = Chem.MolFromSmarts(group)
     if vars.functional_groups_dict[group] in vars.groups_dict:
         replacement_values = vars.groups_dict[vars.functional_groups_dict[group]]
@@ -88,7 +96,8 @@ def derive(ligand, group):
                     ind_frag = Chem.MolFragmentToSmiles(rms[0], frag)
                     if (len(ind_frag) > 25) & (ind_frag != "O[H][H]") & (ind_frag not in derivative_smile):
                         derivative_smile.append(ind_frag)
-                        deriv_type[ind_frag] = [vars.functional_groups_dict[group], ligand]
+                        new_functional_group = vars.functional_groups_dict[a]
+                        deriv_type[ind_frag] = [vars.functional_groups_dict[group], new_functional_group, ligand]
                         temp_mol = Chem.MolFromSmiles(ind_frag)
                         if temp_mol is not None:
                             derivative_mols.append(temp_mol)

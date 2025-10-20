@@ -279,11 +279,11 @@ def create_proteins(attr_bool, attr_val, attr_comp):
         if comp_vals_initial == "==":
             comp_vals[value] = "equals"
         elif comp_vals_initial == ">":
-            comp_vals[value] = "greater_than"
+            comp_vals[value] = "greater"
         elif comp_vals_initial == ">=":
             comp_vals[value] = "greater_or_equal"
         elif comp_vals_initial == "<":
-            comp_vals[value] = "less_than"
+            comp_vals[value] = "less"
         elif comp_vals_initial == "<=":
             comp_vals[value] = "less_or_equal"
         elif comp_vals_initial == "is":
