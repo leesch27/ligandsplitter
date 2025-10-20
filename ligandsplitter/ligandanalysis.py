@@ -3,7 +3,7 @@ import sys, os
 import numpy as np
 import re
 from rdkit import Chem
-from rdkit.Chem import Descriptors, AllChem, Draw, Crippen, Lipinski
+from rdkit.Chem import Descriptors, Crippen, Lipinski
 import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV, train_test_split, cross_val_score, cross_validate
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
