@@ -9,6 +9,7 @@ class LigandVariables:
         self.hydroxy = '[OX2H;$([O]([C])[H]);!$([O](C=O)[H])][H]'
         self.carbox_acid = '[CX3;!$([CX3][H])](=O)[OX2H][H]'
         self.aldehyde = '[CX3;$(C([H])(=O)[C])](=[O;!$([O][O])])[H]'
+        self.ketone = '[CX3;$(C([H])(=O)[H])](=[O;!$([O][O])])[CX3]'
         self.anhydr = 'C-[CX3](=O)[O][CX3](=O)-C'
 
         #nitrogen containing
@@ -65,10 +66,12 @@ class LigandVariables:
             'ester': ['C(=O)-[NH]-C', 'C[C](=O)[O][C](=O)C'],
             'ether': ['C-S-C'],
             'hydroxy': ['C(=O)[OH]', 'C(=O)-[H]', 'C(=O)-Cl'],
-            'carbox_acid': ['C(=O)-[H]', 'C(=O)-Cl'],
-            'aldehyde': ['C(=O)[OH]', 'C(=O)-Cl', 'C-[OH]', 'C-S-[H]', 'C(=[NH])[H]'],
+            'carbox_acid': ['C(=O)-[H]', 'C(=O)-Cl', 'C-[NH2]'],
+            'aldehyde': ['C(=O)[OH]', 'C(=O)-Cl', 'C-[OH]', 'C-S-[H]', 'C(=[NH])[H]', 'C(-[NH2])[H][H]'],
+            'ketone': ['C(-[NH2])[C]', 'C(=[NH])C'],
             'anhydr': ['C(=O)-[NH]-C','C(=O)OC'],
             'amine': ['CC', 'C-[N+](=O)-[O-]'],
+            'amine_2': ['C(=O)(N(C)C)C'],
             'amide': ['C(=O)[OH]', 'C(=O)-[H]'],
             'amide_2': ['C(=O)OC'],
             'nitro': ['C-[NH2]'],
@@ -76,6 +79,8 @@ class LigandVariables:
             'cl_hal': ['F', 'Br', 'I'],
             'br_hal': ['F', 'Cl', 'I'],
             'i_hal': ['F', 'Cl', 'Br'],
+            'alkene': ['CC'],
+            'alkyne': ["C=C", "CC"],
             'alkyne_term': ['C#N'], 
             'phenyl' : ['Cc1ccc([OH])cc1','Cc1ccc(OC)cc1', 'Cc1ccc(C)cc1', 'Cc1ccccc1'],
             'benzyl': ['CCc1ccc([OH])cc1','CCc1ccc(OC)cc1', 'CCc1ccc(C)cc1', 'CCc1ccccc1'],
@@ -133,14 +138,19 @@ class LigandVariables:
             'C[C](=O)[O][C](=O)C': "anhydr",
             self.amine : 'amine',
             "C-[NH2]": 'amine',
+            'C(-[NH2])[H][H]': "amine",
+            'C(-[NH2])[C]': "amine",
             self.amine_2 : 'amine_2',
             self.amine_3: 'amine_3',
             self.amide : 'amide',
             self.amide_2 : 'amide_2',
             self.amide_3: 'amide_3',
+            'C(=O)(N(C)C)C': "amide_3",
             self.nitro : 'nitro',
             'C-[N+](=O)-[O-]': "nitro",
             self.imine: 'imine',
+            'C(=[NH])C': "imine",
+            'C(=[NH])[H]': "imine",
             self.f_hal :'f_hal',
             "F" : 'f_hal',
             self.cl_hal : 'cl_hal',
@@ -167,7 +177,6 @@ class LigandVariables:
             'C(=O)-Cl': "acyl chloride",
             'C-S-[H]': "thiol",
             'C-S-C': "sulfide",
-            'C(=[NH])[H]': "aldimine_1",
             "C(=O)-[NH]-C": "carboxamide",
             "Cc1ccc([OH])cc1": "phenol",
             'CCc1ccc([OH])cc1': "benzyl alcohol",
