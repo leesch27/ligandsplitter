@@ -66,7 +66,10 @@ def oral_bioactive_classifier(data, method = ""):
     -------
     imps : dataframe
         Dataframe containing feature importances of the model.
+    results_dict : dict
+        Dictionary containing predicted orally bioactive values for ligands with missing data (included by user).
     """
+    results_dict = {}
 
     # get feature and target variables
     names = data[data["orally_bioactive"].isna()]["filename_hydrogens"].tolist()
@@ -123,6 +126,7 @@ def oral_bioactive_classifier(data, method = ""):
     predictions = rf_optimal.predict(features_na)
     for index, row in features_na.iterrows():
         print(f"Predicted orally bioactive value for {names[index]}: {predictions[index]}")
+        results_dict[names[index]] = predictions[index]
 
     # obtain feature importance
     feature_names = list(X_train.columns)
@@ -130,7 +134,7 @@ def oral_bioactive_classifier(data, method = ""):
         "Importance": rf_optimal.feature_importances_,
     }
     imps = pd.DataFrame(data=data, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
-    return imps
+    return imps, results_dict
 
 def interaction_regressor(data):
     """
@@ -184,15 +188,21 @@ def interaction_regressor(data):
             "min_samples_leaf": [5, 10, 15, 20]
         }
         xgb_param_grid = {
-            "max_depth": [1, 5, 10, 15, 20]
+            "max_depth": [1, 5, 10, 15, 20],
+            "colsample_bynode": [0.3, 0.5, 0.7, 0.9],
+            "min_child_weight": [5, 10, 15, 20]
         }
     else:
         # if dataset is smaller than 50 samples, adjust hyperparameter ranges
-        calc_min_sample_other_val = int(shape * 0.5)
+        calc_min_sample_depth = int(shape * 0.5)
+        calc_min_sample_other_val = int(shape * 0.75)
 
-        float_step = calc_min_sample_other_val/5
+        float_step = calc_min_sample_depth/5
+        float_weight_step = (calc_min_sample_other_val - 5)/5
         depth_val_step = int(float_step) if float_step > 1 else 1
-        depth_vals = [x for x in range(1, calc_min_sample_other_val + 1, depth_val_step)]
+        child_weight_val_step = int(float_weight_step) if float_weight_step > 1 else 1
+        depth_vals = [x for x in range(1, calc_min_sample_depth + 1, depth_val_step)]
+        child_weight_vals = [x for x in range(5, calc_min_sample_other_val + 1, child_weight_val_step)]
         
         rf_param_grid = {
             "max_depth": depth_vals,
@@ -201,7 +211,9 @@ def interaction_regressor(data):
             "min_samples_leaf": [0.3, 0.5, 0.7, 0.9]
         }
         xgb_param_grid = {
-            "max_depth": depth_vals
+            "max_depth": depth_vals,
+            "colsample_bynode": [0.3, 0.5, 0.7, 0.9],
+            "min_child_weight": child_weight_vals
         }
     rf_random_search = RandomizedSearchCV(RandomForestRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5)
     xgb_random_search = RandomizedSearchCV(xgb.XGBRegressor(), param_distributions=xgb_param_grid, n_jobs=-1, n_iter=10, cv=5)
