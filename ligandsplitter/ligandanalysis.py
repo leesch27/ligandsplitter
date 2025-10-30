@@ -75,17 +75,26 @@ def oral_bioactive_classifier(data, method = ""):
     names = data[data["orally_bioactive"].isna()]["filename_hydrogens"].tolist()
     features = data[data["orally_bioactive"].notna()]
     features_na = data[data["orally_bioactive"].isna()]
+    # drop unneeded columns based on method
+    # Lipinski's Rule of 5: MW <= 500, logP <= 5, H-bond donors <= 5, H-bond acceptors <= 10
+    # drop mol_refractivity, rotatable_bonds, polar_surface_area for LRO5
     if method == "LRO5":
         features = features.drop(columns = ["filename_hydrogens", "smiles", "mol_refractivity", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
         features_na = features_na.drop(columns = ["filename_hydrogens", "smiles", "mol_refractivity", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+    # Ghose filter: 160 <= MW <= 480, -0.4 <= logP <= 5.6, 40 <= molar refractivity <= 130, 20 <= atoms <= 70
+    # drop rotatable_bonds, polar_surface_area for Ghose
     elif method == "Ghose":
         features = features.drop(columns = ["filename_hydrogens", "smiles", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
         features_na = features_na.drop(columns = ["filename_hydrogens", "smiles", "rotatable_bonds", "polar_surface_area", "orally_bioactive", "mol"])
+    # Veber's rule: rotatable_bonds <= 10, polar_surface_area <= 140
+    # drop no additional features for Veber
     elif method == "Veber":
         features = features.drop(columns = ["filename_hydrogens", "smiles", "orally_bioactive", "mol"])
         features_na = features_na.drop(columns = ["filename_hydrogens", "smiles", "orally_bioactive", "mol"])
     else:
         print("Please provide a valid method: LRO5, Ghose, or Veber.")
+    
+    # target is orally_bioactive column
     target = data[data["orally_bioactive"].notna()]["orally_bioactive"]
 
     # define training and testing data
@@ -136,7 +145,7 @@ def oral_bioactive_classifier(data, method = ""):
     imps = pd.DataFrame(data=data, index=feature_names,).sort_values(by="Importance", ascending=False)[:10]
     return imps, results_dict
 
-def interaction_regressor(data):
+def interaction_regressor(data, quiet = True):
     """
     Determine the importance of ligand features in determining binding affinity.
     
@@ -168,15 +177,17 @@ def interaction_regressor(data):
 
     scores_rf_r = cross_validate(rf_r, X_train, y_train, return_train_score=True)
     scores_xgb_r = cross_validate(xgb_model, X_train, y_train, return_train_score=True)
-    print(f"Initial Random Forest cross-validation fit time: {scores_rf_r['fit_time']}")
-    print(f"Initial Random Forest cross-validation score time: {scores_rf_r['score_time']}")
-    print(f"Initial Random Forest cross-validation training scores: {scores_rf_r['train_score']}")
-    print(f"Initial Random Forest cross-validation testing scores: {scores_rf_r['test_score']}")
+    
+    if quiet == False:
+        print(f"Initial Random Forest cross-validation fit time: {scores_rf_r['fit_time']}")
+        print(f"Initial Random Forest cross-validation score time: {scores_rf_r['score_time']}")
+        print(f"Initial Random Forest cross-validation training scores: {scores_rf_r['train_score']}")
+        print(f"Initial Random Forest cross-validation testing scores: {scores_rf_r['test_score']}")
 
-    print(f"Initial XGBoost cross-validation fit time: {scores_xgb_r['fit_time']}")
-    print(f"Initial XGBoost cross-validation score time: {scores_xgb_r['score_time']}")
-    print(f"Initial XGBoost cross-validation training scores: {scores_xgb_r['train_score']}")
-    print(f"Initial XGBoost cross-validation testing scores: {scores_xgb_r['test_score']}")
+        print(f"Initial XGBoost cross-validation fit time: {scores_xgb_r['fit_time']}")
+        print(f"Initial XGBoost cross-validation score time: {scores_xgb_r['score_time']}")
+        print(f"Initial XGBoost cross-validation training scores: {scores_xgb_r['train_score']}")
+        print(f"Initial XGBoost cross-validation testing scores: {scores_xgb_r['test_score']}")
 
     # hyperparameter optimization
     print("Starting hyperparameter optimization...")
@@ -217,7 +228,7 @@ def interaction_regressor(data):
         }
     rf_random_search = RandomizedSearchCV(RandomForestRegressor(), param_distributions=rf_param_grid, n_jobs=-1, n_iter=10, cv=5)
     xgb_random_search = RandomizedSearchCV(xgb.XGBRegressor(), param_distributions=xgb_param_grid, n_jobs=-1, n_iter=10, cv=5)
-    print("Done!")
+    print("Done with hyperparameter optimization!")
 
     # create and deploy optimized model
     print("Fitting optimized models...")
