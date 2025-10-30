@@ -2,6 +2,7 @@
 import sys, os
 
 class LigandVariables:
+    """Class to hold common functional groups used in ligand analysis and derivation."""
     def __init__(self):
         #common functional groups
         self.ester = '[CX3H1,CX3](=O)[OX2H0][C;!$([C]=[O])]'
@@ -292,6 +293,7 @@ def create_folders(dir = ""):
 def convert_type(start_type):
     """
     Determine if the start_type is a string or an integer.
+    Used in ligand splitting to determine what information is in a given line of a MOL2 file.
 
     Parameters
     ----------

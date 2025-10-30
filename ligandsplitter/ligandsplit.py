@@ -4,6 +4,7 @@ import re
 import sys, os
 from Bio.PDB import PDBList, PDBIO
 from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 import MDAnalysis as mda 
 from openbabel import pybel
 from .basefunctions import convert_type
@@ -80,6 +81,7 @@ def retrieve_pdb_file(pdb_id, format = ""):
                     "IR3", "IR", "K", "LA", "LI", "LU", "MG", "MN", "MN3", "4MO", "6MO", "NA", "ND", "NI", "3NI", "OS", 
                     "OS4", "PB", "PD", "PR", "PT", "PT4", "4PU", "RB", "RH3", "RHF", "RU", "SB", "SM", "SR", "TB", "TH", 
                     "4TI", "TL", "V", "W", "Y1", "YB", "YB2", "YT3", "ZCM", "ZN", "ZR", "ZTM"]
+    # List of amino acid residue names
     res_list = ["ALA", "CYS", 'ASP', 'GLU','PHE','GLY', 'HIS', 'ILE', 'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR']
     if format == "pdb":
         covalent_ligs = []
@@ -140,15 +142,27 @@ def retrieve_pdb_file(pdb_id, format = ""):
     elif format == "mmcif":
         pdb_filename = pdb_list.retrieve_pdb_file(pdb_id, pdir="data/PDB_files", file_format="mmCif")
         # parse mmcif file and produce a pdb file with only the receptor present
+        covalent_ligs = []
         p = MMCIFParser()
+        mmcifdict = MMCIF2Dict(pdb_filename)
+        nonstandard_res = list(mmcifdict["_entity_poly.nstd_monomer"])
+        nonstandard_code = list(mmcifdict["_entity_poly.pdbx_seq_one_letter_code"])
         struc_prot = p.get_structure("", pdb_filename)
         for model in struc_prot:
-            for chain in model:
+            for chain_num, chain in enumerate(model):
+                # remove non-protein residues unless they are covalently bound ligands
+                one_letter_code = nonstandard_code[chain_num]
+                x = re.findall(r"\((.*?)\)", one_letter_code)
+                for res in x:
+                    covalent_ligs.append(f"H_{res}")
                 for residue in list(chain):
                     residue.get_resname()
                     res_id = residue.id
-                    if res_id[0] != ' ':
+                    if (res_id[0] != ' ') and (nonstandard_res[chain_num] == "no"):
                         chain.detach_child(res_id)
+                    elif nonstandard_res[chain_num] == "yes":
+                        if (res_id[0] != ' ') and (res_id[0] not in covalent_ligs):
+                            chain.detach_child(res_id)
         io = PDBIO()
         io.set_structure(struc_prot)
         io.save(f"data/PDB_files/{pdb_id}_protein.pdb")
@@ -162,6 +176,8 @@ def retrieve_pdb_file(pdb_id, format = ""):
                     if res_id[0] == ' ' or res_id[0] == 'W':
                         chain.detach_child(res_id)
                     else:
+                        if res_id[0] in covalent_ligs:
+                            chain.detach_child(res_id)
                         for value in list_of_ions:
                             if res_id[0] == f'H_{value}':
                                 chain.detach_child(res_id)
@@ -237,14 +253,27 @@ def retrieve_pdb_file(pdb_id, format = ""):
                 clean_ligand_exists = False
         elif "cif" in format_subset:
             # parse mmcif file and produce a pdb file with only the protein present
+            covalent_ligs = []
             p = MMCIFParser()
-            struc_prot = p.get_structure("", pdb_id)
+            mmcifdict = MMCIF2Dict(pdb_filename)
+            nonstandard_res = list(mmcifdict["_entity_poly.nstd_monomer"])
+            nonstandard_code = list(mmcifdict["_entity_poly.pdbx_seq_one_letter_code"])
+            struc_prot = p.get_structure("", pdb_filename)
             for model in struc_prot:
-                for chain in model:
+                for chain_num, chain in enumerate(model):
+                    # remove non-protein residues unless they are covalently bound ligands
+                    one_letter_code = nonstandard_code[chain_num]
+                    x = re.findall(r"\((.*?)\)", one_letter_code)
+                    for res in x:
+                        covalent_ligs.append(f"H_{res}")
                     for residue in list(chain):
+                        residue.get_resname()
                         res_id = residue.id
-                        if res_id[0] != ' ':
+                        if (res_id[0] != ' ') and (nonstandard_res[chain_num] == "no"):
                             chain.detach_child(res_id)
+                        elif nonstandard_res[chain_num] == "yes":
+                            if (res_id[0] != ' ') and (res_id[0] not in covalent_ligs):
+                                chain.detach_child(res_id)
             io = PDBIO()
             io.set_structure(struc_prot)
             io.save(f"data/PDB_files/{short_filename}_protein.pdb")
@@ -258,6 +287,8 @@ def retrieve_pdb_file(pdb_id, format = ""):
                         if res_id[0] == ' ' or res_id[0] == 'W':
                             chain.detach_child(res_id)
                         else:
+                            if res_id[0] in covalent_ligs:
+                                chain.detach_child(res_id)
                             for value in list_of_ions:
                                 if res_id[0] == f'H_{value}':
                                     chain.detach_child(res_id)
