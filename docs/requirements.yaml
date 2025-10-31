@@ -13,6 +13,7 @@ dependencies:
   - MDAnalysis
   - openbabel
   - rdkit
+  - py-xgboost
   
   - pydata-sphinx-theme
   - sphinx-design
