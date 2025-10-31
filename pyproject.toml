@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ligandsplitter"
 description = "A python package for splitting, creating, and validating ligand files"
-version = "1.0.2"
+version = "0.0.2"
 readme = "README.md"
 authors = [
     { name = "Lee Schoneman", email = "kes6022@rit.edu" }
@@ -19,15 +19,14 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "numpy==1.26.4",
+    "numpy",
     "pandas",
     "rdkit",
-    "openbabel",
     "MDAnalysis",
     "biopython",
-    "ipywidgets",
+    "jupyter",
     "scikit-learn",
-    "py-xgboost",
+    "xgboost",
     "rcsb-api"
 ]
 
