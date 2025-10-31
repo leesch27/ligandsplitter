@@ -1,4 +1,5 @@
 User Guide
 ===============
 
-This page details how to use ligandsplitter. 
+ligandsplitter was initially made to enhance a series of notebooks that explore molecular docking using Jupyter notebooks. 
+ 

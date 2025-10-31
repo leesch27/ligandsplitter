@@ -3,8 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to ligandsplitter's documentation!
+ligandsplitter documentation
 =========================================================
+
+The ``rcsb-api`` package provides a Python interface to 
+`RCSB PDB API services <https://www.rcsb.org/docs/programmatic-access/web-apis-overview>`_. 
+Use it to search and fetch macromolecular structure data from RCSB PDB `at RCSB.org <https://www.rcsb.org/>`_.
+
+Availability
+------------
+
+Install it from PyPI via ``pip``:
+
+.. code-block:: bash
+
+   pip install ligandsplitter
+
+
+Or, download from `GitHub <https://github.com/leesch27/ligandsplitter>`_
 
 .. grid:: 1 1 2 2
 
@@ -48,20 +64,6 @@ Welcome to ligandsplitter's documentation!
 
          To the API Reference.
 
-      
-
-    .. grid-item-card::  Developer Guide
-      :margin: 0 3 0 0
-      
-      How to contribute to ligandsplitter.
-
-      .. button-link:: ./developer_guide.html
-         :color: primary
-         :outline:
-         :expand:
-
-         To the Developer Guide
-
 
 .. toctree::
    :maxdepth: 2
@@ -71,5 +73,4 @@ Welcome to ligandsplitter's documentation!
    getting_started
    user_guide
    api
-   developer_guide
 
