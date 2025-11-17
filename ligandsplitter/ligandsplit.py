@@ -255,10 +255,10 @@ def retrieve_pdb_file(pdb_id, format = ""):
             # parse mmcif file and produce a pdb file with only the protein present
             covalent_ligs = []
             p = MMCIFParser()
-            mmcifdict = MMCIF2Dict(pdb_filename)
+            mmcifdict = MMCIF2Dict(pdb_id)
             nonstandard_res = list(mmcifdict["_entity_poly.nstd_monomer"])
             nonstandard_code = list(mmcifdict["_entity_poly.pdbx_seq_one_letter_code"])
-            struc_prot = p.get_structure("", pdb_filename)
+            struc_prot = p.get_structure("", pdb_id)
             for model in struc_prot:
                 for chain_num, chain in enumerate(model):
                     # remove non-protein residues unless they are covalently bound ligands

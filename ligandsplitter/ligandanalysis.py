@@ -160,7 +160,10 @@ def interaction_regressor(data, quiet = True):
         Dataframe containing feature importances of the model.
     """
 
-    features = data.drop(columns = ["Score", "Ligand", "Frame"])
+    features = data.drop(columns = ["Score", "Frame"])
+    if "Ligand" in features.columns:
+        features = features.drop(columns = ["Ligand"])
+        
     target = data["Score"]
     shape = features.shape[0]
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size = 0.2)
